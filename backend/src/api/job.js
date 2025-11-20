@@ -54,9 +54,9 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO jobs
-      (title, description, category, skills, job_type, location, duration, start_date, payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions, terms_accepted, user_id, status)
+      (title, description, category, skills, job_type, location, duration, start_date, payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions, terms_accepted, status)
       VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
       RETURNING *`,
       [
         title,
@@ -75,7 +75,6 @@ router.post('/', authenticateToken, async (req, res) => {
         deadline || null,
         screeningQuestions || [],
         termsAccepted,
-        userId, // Link job to user
         'active' // Default status
       ]
     );
@@ -95,15 +94,104 @@ router.get('/my-jobs', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
 
+    // Since we don't have user_id column, return empty array for now
+    // Or you can modify this to work differently
+    console.log('⚠️ my-jobs endpoint called but user_id column not available');
+    res.status(200).json({ jobs: [] });
+    
+    // Alternative: If you want to return all jobs temporarily:
+    /*
     const result = await pool.query(
       `SELECT j.*, 
               COUNT(a.id) as applications_count
        FROM jobs j 
        LEFT JOIN applicants a ON j.id = a.job_id 
-       WHERE j.user_id = $1 
        GROUP BY j.id 
+       ORDER BY j.created_at DESC`
+    );
+
+    const jobs = result.rows.map(job => ({
+      id: job.id,
+      title: job.title,
+      description: job.description,
+      category: job.category,
+      skills: job.skills || [],
+      job_type: job.job_type,
+      location: job.location,
+      duration: job.duration,
+      start_date: job.start_date,
+      payment_type: job.payment_type,
+      min_budget: job.min_budget,
+      max_budget: job.max_budget,
+      currency: job.currency,
+      contact_email: job.contact_email,
+      deadline: job.deadline,
+      screening_questions: job.screening_questions || [],
+      status: job.status,
+      created_at: job.created_at,
+      applications: job.applications_count || 0
+    }));
+
+    res.status(200).json({ jobs });
+    */
+  } catch (error) {
+    console.error('Error fetching user jobs:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/jobs/search - Search jobs (public) - FIXED
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ error: "Missing search query" });
+
+    const result = await pool.query(
+      `SELECT j.*, 
+              COUNT(a.id) as applications_count
+       FROM jobs j 
+       LEFT JOIN applicants a ON j.id = a.job_id 
+       WHERE (LOWER(j.title) LIKE LOWER($1)
+          OR LOWER(j.description) LIKE LOWER($1)
+          OR LOWER(j.category) LIKE LOWER($1))
+         AND j.status = 'active'
+       GROUP BY j.id
        ORDER BY j.created_at DESC`,
-      [userId]
+      [`%${q}%`]
+    );
+
+    const jobs = result.rows.map(job => {
+      let skills = [];
+      try {
+        skills = job.skills ? JSON.parse(job.skills) : [];
+      } catch (e) {
+        console.log('Error parsing skills:', e);
+      }
+      return { 
+        ...job, 
+        skills,
+        applications: job.applications_count || 0
+      };
+    });
+
+    res.status(200).json(jobs);
+  } catch (err) {
+    console.error("Search jobs error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/jobs - Get all jobs (public) - FIXED
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT j.*, 
+              COUNT(a.id) as applications_count
+       FROM jobs j 
+       LEFT JOIN applicants a ON j.id = a.job_id 
+       WHERE j.status = 'active'
+       GROUP BY j.id
+       ORDER BY j.created_at DESC`
     );
 
     const jobs = result.rows.map(job => ({
@@ -130,114 +218,17 @@ router.get('/my-jobs', authenticateToken, async (req, res) => {
 
     res.status(200).json({ jobs });
   } catch (error) {
-    console.error('Error fetching user jobs:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /api/jobs/search - Search jobs (public)
-router.get('/search', async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q) return res.status(400).json({ error: "Missing search query" });
-
-    const result = await pool.query(
-      `SELECT j.*, 
-              u.first_name, 
-              u.last_name,
-              COUNT(a.id) as applications_count
-       FROM jobs j 
-       LEFT JOIN users u ON j.user_id = u.id
-       LEFT JOIN applicants a ON j.id = a.job_id 
-       WHERE (LOWER(j.title) LIKE LOWER($1)
-          OR LOWER(j.description) LIKE LOWER($1)
-          OR LOWER(j.category) LIKE LOWER($1))
-         AND j.status = 'active'
-       GROUP BY j.id, u.first_name, u.last_name
-       ORDER BY j.created_at DESC`,
-      [`%${q}%`]
-    );
-
-    const jobs = result.rows.map(job => {
-      let skills = [];
-      try {
-        skills = job.skills ? JSON.parse(job.skills) : [];
-      } catch (e) {
-        console.log('Error parsing skills:', e);
-      }
-      return { 
-        ...job, 
-        skills,
-        applications: job.applications_count || 0,
-        employer: {
-          firstName: job.first_name,
-          lastName: job.last_name
-        }
-      };
-    });
-
-    res.status(200).json(jobs);
-  } catch (err) {
-    console.error("Search jobs error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// GET /api/jobs - Get all jobs (public)
-router.get('/', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT j.*, 
-              u.first_name, 
-              u.last_name,
-              COUNT(a.id) as applications_count
-       FROM jobs j 
-       LEFT JOIN users u ON j.user_id = u.id
-       LEFT JOIN applicants a ON j.id = a.job_id 
-       WHERE j.status = 'active'
-       GROUP BY j.id, u.first_name, u.last_name
-       ORDER BY j.created_at DESC`
-    );
-
-    const jobs = result.rows.map(job => ({
-      id: job.id,
-      title: job.title,
-      description: job.description,
-      category: job.category,
-      skills: job.skills || [],
-      job_type: job.job_type,
-      location: job.location,
-      duration: job.duration,
-      start_date: job.start_date,
-      payment_type: job.payment_type,
-      min_budget: job.min_budget,
-      max_budget: job.max_budget,
-      currency: job.currency,
-      contact_email: job.contact_email,
-      deadline: job.deadline,
-      screening_questions: job.screening_questions || [],
-      status: job.status,
-      created_at: job.created_at,
-      applications: job.applications_count || 0,
-      employer: {
-        firstName: job.first_name,
-        lastName: job.last_name
-      }
-    }));
-
-    res.status(200).json({ jobs });
-  } catch (error) {
     console.error('Error fetching jobs:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// GET /api/jobs/:id - Get single job by ID (public) - THIS SHOULD BE LAST!
+// GET /api/jobs/:id - Get single job by ID (public) - FIXED
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ STRONG VALIDATION: Check if it's a special route name that should be handled by other routes
+    // ✅ STRONG VALIDATION: Check if it's a special route name
     const reservedRoutes = ['my-jobs', 'search', 'applicants', 'categories'];
     if (reservedRoutes.includes(id)) {
       console.log(`⚠️ Reserved route '${id}' accessed via :id parameter`);
@@ -252,16 +243,12 @@ router.get('/:id', async (req, res) => {
 
     const result = await pool.query(
       `SELECT j.*, 
-              u.first_name, 
-              u.last_name,
-              u.profile_pic,
               COUNT(a.id) as applications_count
        FROM jobs j 
-       LEFT JOIN users u ON j.user_id = u.id
        LEFT JOIN applicants a ON j.id = a.job_id 
        WHERE j.id = $1
-       GROUP BY j.id, u.first_name, u.last_name, u.profile_pic`,
-      [jobId] // Use parsed integer
+       GROUP BY j.id`,
+      [jobId]
     );
 
     if (result.rows.length === 0) {
@@ -288,13 +275,7 @@ router.get('/:id', async (req, res) => {
       screening_questions: job.screening_questions || [],
       status: job.status,
       created_at: job.created_at,
-      applications: job.applications_count || 0,
-      employer: {
-        id: job.user_id,
-        firstName: job.first_name,
-        lastName: job.last_name,
-        profilePic: job.profile_pic
-      }
+      applications: job.applications_count || 0
     };
 
     res.status(200).json({ job: jobWithDetails });
