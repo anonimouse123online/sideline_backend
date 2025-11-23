@@ -216,7 +216,7 @@ router.get('/', async (req, res) => {
       applications: job.applications_count || 0
     }));
 
-    res.status(200).json({ jobs });
+    res.status(200).json( jobs );
   } catch (error) {
     console.error('Error fetching jobs:', error);
     res.status(500).json({ error: 'Internal server error' });
