@@ -34,21 +34,21 @@ router.post('/', async (req, res) => {
 
     // Insert application
     const result = await pool.query(
-      `INSERT INTO applicants 
-       (job_id, user_id, position, experience, location, cover_letter, resume_url, skills, status, applied_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW())
-       RETURNING *`,
-      [
-        job_id,
-        user_id,
-        position,
-        experience,
-        location,
-        cover_letter,
-        resume_url,
-        skills.length ? JSON.stringify(skills) : null
-      ]
-    );
+  `INSERT INTO applicants 
+   (job_id, user_id, experience, location, cover_letter, resume_url, skills, status, applied_at)
+   VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW())
+   RETURNING *`,
+  [
+    job_id,
+    user_id,
+    experience,
+    location,
+    cover_letter,
+    resume_url,
+    skills.length ? JSON.stringify(skills) : null
+  ]
+);
+
 
     res.status(201).json({
       message: 'Application submitted successfully',
