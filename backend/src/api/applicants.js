@@ -7,16 +7,16 @@ const router = express.Router();
 // -------------------- POST /api/applicants -------------------- //
 router.post('/', async (req, res) => {
   try {
-    const {
-      job_id,
-      user_id, // <-- must be provided
-      position = null,
-      experience = null,
-      location = null,
-      cover_letter = null,
-      resume_url = null,
-      skills = []
-    } = req.body;
+   const {
+  job_id,
+  user_id,
+  experience = null,
+  location = null,
+  cover_letter = null,
+  resume_url = null,
+  skills = []
+} = req.body;
+
 
     if (!job_id || !user_id) {
       return res.status(400).json({ error: 'Missing required job_id or user_id' });
