@@ -1,23 +1,14 @@
 // backend/routes/applicants.js
 import express from 'express';
 import pool from '../../db.js';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch'; // Make sure node-fetch is installed
 
-dotenv.config(); // Load env variables
+dotenv.config();
 
 const router = express.Router();
 
-// Brevo SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // TLS false for port 587
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-});
+const BREVO_API_KEY = process.env.BREVO_API_KEY; // Your xkeysib-... API key
 
 // POST /api/applicants
 router.post('/', async (req, res) => {
@@ -96,7 +87,7 @@ router.post('/', async (req, res) => {
     const applicant = applicantRes.rows[0];
     const job = jobRes.rows[0];
 
-    // -------- SEND EMAIL TO CLIENT ASYNC --------
+    // -------- SEND EMAIL TO CLIENT VIA BREVO API ASYNC --------
     if (job?.contact_email) {
       const emailHTML = `
         <p>Hello,</p>
@@ -113,16 +104,26 @@ router.post('/', async (req, res) => {
         </ul>
       `;
 
-      const mailOptions = {
-        from: '"Sideline Jobs" <no-reply@sideline.com>',
-        to: job.contact_email,
-        subject: `New Application: ${job.title}`,
-        html: emailHTML
-      };
+      try {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": BREVO_API_KEY
+          },
+          body: JSON.stringify({
+            sender: { name: "Sideline Jobs", email: "no-reply@sideline.com" },
+            to: [{ email: job.contact_email }],
+            subject: `New Application: ${job.title}`,
+            htmlContent: emailHTML
+          })
+        });
 
-      transporter.sendMail(mailOptions)
-        .then(info => console.log(`📧 Email sent to client: ${job.contact_email}`))
-        .catch(err => console.error("❌ Email sending failed:", err.message));
+        const result = await response.json();
+        console.log("📧 Email sent via Brevo API:", result);
+      } catch (err) {
+        console.error("❌ Brevo API email failed:", err.message);
+      }
     } else {
       console.warn("⚠️ No contact_email found for job — skipping email.");
     }
