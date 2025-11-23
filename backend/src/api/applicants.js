@@ -77,27 +77,28 @@ router.put('/:applicantId', async (req, res) => {
 });
 
 // -------------------- POST /api/applicants -------------------- //
+// POST /api/applicants - Apply for a job
 router.post('/', async (req, res) => {
   try {
     const {
       job_id,
-      user_id, // ✅ use user_id instead of id
-      position,
-      experience,
-      location,
-      cover_letter,
-      resume_url,
-      skills
+      id, // user ID
+      position = null,
+      experience = null,
+      location = null,
+      cover_letter = null,
+      resume_url = null,
+      skills = []
     } = req.body;
 
-    if (!job_id || !user_id || !position || !cover_letter) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!job_id || !id) {
+      return res.status(400).json({ error: 'Missing required job_id or user id' });
     }
 
     // Check if user already applied
     const existingApplication = await pool.query(
       'SELECT id FROM applicants WHERE job_id = $1 AND user_id = $2',
-      [job_id, user_id]
+      [job_id, id]
     );
 
     if (existingApplication.rows.length > 0) {
@@ -111,13 +112,13 @@ router.post('/', async (req, res) => {
        RETURNING *`,
       [
         job_id,
-        user_id,
+        id,
         position,
-        experience || null,
-        location || null,
+        experience,
+        location,
         cover_letter,
-        resume_url || null,
-        JSON.stringify(skills || [])
+        resume_url,
+        JSON.stringify(skills)
       ]
     );
 
