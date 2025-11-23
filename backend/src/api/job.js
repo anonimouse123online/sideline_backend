@@ -65,7 +65,7 @@ const maxBudgetValue = maxBudget != null ? maxBudget : null;
 const result = await pool.query(
   `INSERT INTO jobs
     (title, description, category, skills, job_type, location, duration, start_date,
-     payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions, user_id)
+     payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions, id)
    VALUES
     ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
    RETURNING *`,
