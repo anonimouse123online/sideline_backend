@@ -24,13 +24,15 @@ router.post('/', async (req, res) => {
     location = null,
     cover_letter = null,
     resume_url = null,
-    skills = null
+    skills = null,
+    position
   } = req.body;
 
   // -------- VALIDATION --------
   const missingFields = [];
   if (!job_id) missingFields.push("job_id");
   if (!user_id) missingFields.push("user_id");
+  if (!position) missingFields.push("position");
 
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -58,8 +60,8 @@ router.post('/', async (req, res) => {
     try {
       inserted = await pool.query(
         `INSERT INTO applicants 
-         (job_id, user_id, experience, location, cover_letter, resume_url, skills, status, applied_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',NOW())
+         (job_id, user_id, experience, location, cover_letter, resume_url, skills, status, position, applied_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8,NOW())
          RETURNING *`,
         [
           job_id,
@@ -68,7 +70,8 @@ router.post('/', async (req, res) => {
           location,
           cover_letter,
           resume_url,
-          skills ? JSON.stringify(skills) : null
+          skills ? JSON.stringify(skills) : null,
+          position
         ]
       );
     } catch (sqlErr) {
@@ -77,44 +80,32 @@ router.post('/', async (req, res) => {
       return res.status(500).json({
         error: "Database insert failed",
         details: sqlErr.message,
-        hint: "Check NOT NULL columns, or mismatched column names in applicants table"
+        hint: "Check NOT NULL columns or column types in applicants table"
       });
     }
 
     const application = inserted.rows[0];
 
-    // -------- FETCH USER --------
-    const applicantRes = await pool.query(
-      `SELECT first_name, last_name, email 
-       FROM users WHERE id=$1`,
-      [user_id]
-    );
+    // Respond immediately
+    res.status(201).json({
+      message: 'Application submitted successfully',
+      application
+    });
 
-    if (applicantRes.rows.length === 0) {
-      console.warn("⚠️ Applicant not found in users table!");
-    }
+    // -------- FETCH USER & JOB INFO --------
+    const [applicantRes, jobRes] = await Promise.all([
+      pool.query(`SELECT first_name, last_name, email FROM users WHERE id=$1`, [user_id]),
+      pool.query(`SELECT title, description, contact_email FROM jobs WHERE id=$1`, [job_id])
+    ]);
 
     const applicant = applicantRes.rows[0];
-
-    // -------- FETCH JOB INFO --------
-    const jobRes = await pool.query(
-      `SELECT title, description, contact_email
-       FROM jobs WHERE id=$1`,
-      [job_id]
-    );
-
-    if (jobRes.rows.length === 0) {
-      console.warn("⚠️ Job not found!");
-    }
-
     const job = jobRes.rows[0];
 
-    // -------- SEND EMAIL TO CLIENT --------
-    if (job && job.contact_email) {
+    // -------- SEND EMAIL TO CLIENT ASYNC --------
+    if (job?.contact_email) {
       const emailHTML = `
         <p>Hello,</p>
         <p>You received a new application for <strong>${job.title}</strong>.</p>
-
         <h3>Applicant Details:</h3>
         <ul>
           <li><strong>Name:</strong> ${applicant?.first_name || ''} ${applicant?.last_name || ''}</li>
@@ -134,24 +125,15 @@ router.post('/', async (req, res) => {
         html: emailHTML
       };
 
-      try {
-        await transporter.sendMail(mailOptions);
-        console.log(`📧 Email sent to client: ${job.contact_email}`);
-      } catch (emailErr) {
-        console.error("❌ Email sending failed:", emailErr.message);
-      }
+      transporter.sendMail(mailOptions)
+        .then(info => console.log(`📧 Email sent to client: ${job.contact_email}`))
+        .catch(err => console.error("❌ Email sending failed:", err.message));
     } else {
       console.warn("⚠️ No contact_email found for job — skipping email.");
     }
 
-    res.status(201).json({
-      message: 'Application submitted successfully',
-      application
-    });
-
   } catch (err) {
     console.error("❌ Unexpected error:", err);
-
     res.status(500).json({
       error: 'Internal server error',
       details: err.message
