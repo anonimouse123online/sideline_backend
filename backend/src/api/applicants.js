@@ -9,6 +9,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       job_id,
+      user_id, // <-- must be provided
       position = null,
       experience = null,
       location = null,
@@ -17,18 +18,29 @@ router.post('/', async (req, res) => {
       skills = []
     } = req.body;
 
-    if (!job_id) {
-      return res.status(400).json({ error: 'Missing required job_id' });
+    if (!job_id || !user_id) {
+      return res.status(400).json({ error: 'Missing required job_id or user_id' });
     }
 
-    // Insert application safely
+    // Check if user already applied for this job
+    const existing = await pool.query(
+      'SELECT id FROM applicants WHERE job_id = $1 AND user_id = $2',
+      [job_id, user_id]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'You have already applied for this job' });
+    }
+
+    // Insert application
     const result = await pool.query(
       `INSERT INTO applicants 
-       (job_id, position, experience, location, cover_letter, resume_url, skills, status, applied_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW())
+       (job_id, user_id, position, experience, location, cover_letter, resume_url, skills, status, applied_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW())
        RETURNING *`,
       [
         job_id,
+        user_id,
         position,
         experience,
         location,
