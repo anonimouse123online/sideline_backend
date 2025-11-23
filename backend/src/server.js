@@ -115,7 +115,9 @@ const startServer = async () => {
         return res.status(400).json({ error: "Email already registered" });
 
       // Hash password
-      const hashedPassword = await bcrypt.hash(password, 12);
+      // TEMP: Store plain password (no hashing)
+const hashedPassword = password;
+
 
       // Create user
       const newUser = await pool.query(
@@ -158,50 +160,57 @@ const startServer = async () => {
 
   // ✅ UPDATED: Login with JWT token
   app.post("/api/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      if (!email || !password)
-        return res.status(400).json({ error: "Email and password required" });
+  try {
+    const { email, password } = req.body;
 
-      const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-      if (userResult.rows.length === 0)
-        return res.status(400).json({ error: "User not found" });
-
-      const user = userResult.rows[0];
-
-      // Compare passwords
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid)
-        return res.status(400).json({ error: "Invalid password" });
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { 
-          userId: user.id,
-          email: user.email 
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.status(200).json({
-        message: "Login successful",
-        user: {
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          email: user.email,
-          phone: user.phone,
-          profilePic: user.profile_pic || null,
-        },
-        token: token,
-        expiresIn: '24h'
-      });
-    } catch (err) {
-      console.error("Login error:", err);
-      res.status(500).json({ error: "Server error" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password required" });
     }
-  });
+
+    // Check if user exists
+    const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ error: "User not found" });
+    }
+
+    const user = userResult.rows[0];
+
+    // 🟦 PLAIN PASSWORD CHECK (NO BCRYPT)
+    if (password !== user.password) {
+      return res.status(400).json({ error: "Invalid password" });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Success response
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+        phone: user.phone,
+        profilePic: user.profile_pic || null,
+      },
+      token: token,
+      expiresIn: '24h'
+    });
+
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 
   // ✅ UPDATE: Profile update with authentication
   app.put("/api/profile/update", authenticateToken, async (req, res) => {
