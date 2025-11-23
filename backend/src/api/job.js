@@ -56,31 +56,31 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Insert job into PostgreSQL
     const result = await pool.query(
-      `INSERT INTO jobs
-        (title, description, category, skills, job_type, location, duration, start_date,
-         payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions, user_id)
-       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-       RETURNING *`,
-      [
-        title,
-        description,
-        category,
-        JSON.stringify(skills),            // ✅ stringify arrays
-        jobType,
-        location,
-        duration,
-        startDate,
-        paymentType,
-        minBudget,
-        maxBudget,
-        currency,
-        contact_email,
-        deadline,
-        JSON.stringify(screeningQuestions), // ✅ stringify arrays
-        userId
-      ]
-    );
+  `INSERT INTO jobs
+    (title, description, category, skills, job_type, location, duration, start_date,
+     payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions)
+   VALUES
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+   RETURNING *`,
+  [
+    title,
+    description,
+    category,
+    JSON.stringify(skills),
+    jobType,
+    location,
+    duration,
+    startDate,
+    paymentType,
+    minBudget,
+    maxBudget,
+    currency,
+    contact_email,
+    deadline,
+    JSON.stringify(screeningQuestions)
+  ]
+);
+
 
     res.status(201).json({
       message: 'Job posted successfully',

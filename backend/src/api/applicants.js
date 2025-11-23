@@ -4,7 +4,7 @@ import pool from '../../db.js';
 
 const router = express.Router();
 
-// GET /api/applicants/jobs/:jobId/applicants - Get applicants for a specific job
+// GET applicants for a specific job
 router.get('/jobs/:jobId/applicants', async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -18,16 +18,13 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
         u.phone,
         u.profile_pic
        FROM applicants a
-       JOIN users u ON a.user_id = u.id
+       JOIN users u ON a.id = u.id  -- ✅ changed 
        WHERE a.job_id = $1
        ORDER BY a.applied_at DESC`,
       [jobId]
     );
 
-    // If no applicants found, return empty array instead of error
-    if (result.rows.length === 0) {
-      return res.status(200).json([]);
-    }
+    if (result.rows.length === 0) return res.status(200).json([]);
 
     const applicants = result.rows.map(applicant => ({
       id: applicant.id,
@@ -70,9 +67,7 @@ router.put('/:applicantId', async (req, res) => {
       [status, applicantId]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Application not found' });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Application not found' });
 
     res.status(200).json({ application: result.rows[0] });
   } catch (error) {
@@ -86,7 +81,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       job_id,
-      user_id,
+      id, // ✅ changed from 
       position,
       experience,
       location,
@@ -95,15 +90,14 @@ router.post('/', async (req, res) => {
       skills
     } = req.body;
 
-    // Validation
-    if (!job_id || !user_id || !position || !cover_letter) {
+    if (!job_id || !id || !position || !cover_letter) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Check if user already applied
     const existingApplication = await pool.query(
-      'SELECT id FROM applicants WHERE job_id = $1 AND user_id = $2',
-      [job_id, user_id]
+      'SELECT id FROM applicants WHERE job_id = $1 AND id = $2',
+      [job_id, id]
     );
 
     if (existingApplication.rows.length > 0) {
@@ -112,12 +106,12 @@ router.post('/', async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO applicants 
-       (job_id, user_id, position, experience, location, cover_letter, resume_url, skills, status)
+       (job_id, id, position, experience, location, cover_letter, resume_url, skills, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
        RETURNING *`,
       [
         job_id,
-        user_id,
+        id,
         position,
         experience || null,
         location || null,
