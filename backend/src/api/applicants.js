@@ -50,47 +50,75 @@ router.post('/', async (req, res) => {
 
     const application = result.rows[0];
 
-    // Fetch job and client info to send email
+    // --------------------------------------------------------
+    // FETCH APPLICANT & JOB INFO
+    // --------------------------------------------------------
+
+    // Applicant
+    const applicantRes = await pool.query(
+      `SELECT first_name, last_name, email 
+       FROM users WHERE id=$1`,
+      [user_id]
+    );
+
+    if (applicantRes.rows.length === 0) {
+      console.warn("Applicant not found in users table");
+    }
+
+    const applicant = applicantRes.rows[0];
+
+    // Job
     const jobRes = await pool.query(
-      `SELECT j.title, j.description, j.contact_email, u.first_name AS client_first_name, u.last_name AS client_last_name
-       FROM jobs j
-       JOIN users u ON j.contact_email = u.email
-       WHERE j.id = $1`,
+      `SELECT title, description, contact_email
+       FROM jobs
+       WHERE id=$1`,
       [job_id]
     );
 
-    if (jobRes.rows.length > 0) {
-      const job = jobRes.rows[0];
+    if (jobRes.rows.length === 0) {
+      console.warn("Job not found");
+    }
 
-      // Compose email
+    const job = jobRes.rows[0];
+
+    // --------------------------------------------------------
+    // SEND EMAIL TO CLIENT
+    // --------------------------------------------------------
+    if (job && job.contact_email) {
       const mailOptions = {
         from: '"Sideline Jobs" <paulkurtperocillo@gmail.com>',
-        to: job.contact_email, // client email
+        to: job.contact_email,
         subject: `New Application for Your Job: ${job.title}`,
         html: `
-          <p>Hi ${job.client_first_name},</p>
-          <p>You have a new applicant for your job posting: <strong>${job.title}</strong>.</p>
-          <p><strong>Applicant Details:</strong></p>
+          <p>Hello,</p>
+          <p>You received a new application for your job posting <strong>${job.title}</strong>.</p>
+
+          <h3>Applicant Details:</h3>
           <ul>
-            <li>Experience: ${experience || 'N/A'}</li>
-            <li>Location: ${location || 'N/A'}</li>
-            <li>Cover Letter: ${cover_letter || 'N/A'}</li>
-            <li>Resume: ${resume_url ? `<a href="${resume_url}">View Resume</a>` : 'N/A'}</li>
-            <li>Skills: ${skills ? skills.join(', ') : 'N/A'}</li>
+            <li><strong>Name:</strong> ${applicant?.first_name || ''} ${applicant?.last_name || ''}</li>
+            <li><strong>Email:</strong> ${applicant?.email || 'Not provided'}</li>
+            <li><strong>Experience:</strong> ${experience || 'N/A'}</li>
+            <li><strong>Location:</strong> ${location || 'N/A'}</li>
+            <li><strong>Cover Letter:</strong> ${cover_letter || 'N/A'}</li>
+            <li><strong>Skills:</strong> ${skills ? skills.join(', ') : 'N/A'}</li>
+            <li><strong>Resume:</strong> ${resume_url ? `<a href="${resume_url}">View Resume</a>` : 'N/A'}</li>
           </ul>
-          <p>Please check your Sideline dashboard for more details.</p>
+
+          <p>Please log in to your Sideline dashboard for full details.</p>
           <p>Best regards,<br/>Sideline Team</p>
         `
       };
 
-      // Send email
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) console.error('Error sending email:', err);
-        else console.log('Email sent:', info.response);
-      });
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log("Email sent to client:", job.contact_email);
+      } catch (emailErr) {
+        console.error("Email sending failed:", emailErr);
+      }
     }
 
     res.status(201).json({ message: 'Application submitted successfully', application });
+
   } catch (err) {
     console.error('Error submitting application:', err);
     res.status(500).json({ error: 'Internal server error' });
