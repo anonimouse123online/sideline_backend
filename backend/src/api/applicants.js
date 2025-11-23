@@ -18,7 +18,7 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
         u.phone,
         u.profile_pic
        FROM applicants a
-       JOIN users u ON a.user_id = u.id
+       JOIN users u ON a.id = u.id  -- match users.id
        WHERE a.job_id = $1
        ORDER BY a.applied_at DESC`,
       [jobId]
@@ -77,12 +77,11 @@ router.put('/:applicantId', async (req, res) => {
 });
 
 // -------------------- POST /api/applicants -------------------- //
-// POST /api/applicants - Apply for a job
 router.post('/', async (req, res) => {
   try {
     const {
       job_id,
-      id, // user ID
+      id, // user ID from users table
       position = null,
       experience = null,
       location = null,
@@ -97,7 +96,7 @@ router.post('/', async (req, res) => {
 
     // Check if user already applied
     const existingApplication = await pool.query(
-      'SELECT id FROM applicants WHERE job_id = $1 AND user_id = $2',
+      'SELECT id FROM applicants WHERE job_id = $1 AND id = $2', // match applicants.id = user id
       [job_id, id]
     );
 
@@ -107,7 +106,7 @@ router.post('/', async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO applicants 
-       (job_id, user_id, position, experience, location, cover_letter, resume_url, skills, status)
+       (job_id, id, position, experience, location, cover_letter, resume_url, skills, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
        RETURNING *`,
       [
