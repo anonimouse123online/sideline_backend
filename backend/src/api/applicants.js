@@ -277,6 +277,42 @@ router.get('/applicants/count', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// GET all applicants (for admin)
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.applied_at,
+              u.first_name, u.last_name, u.email
+       FROM applicants a
+       LEFT JOIN users u ON a.user_id = u.id
+       ORDER BY a.applied_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET all users (for admin)
+router.get('/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all jobs (for admin)
+router.get('/jobs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM jobs ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 export default router;
