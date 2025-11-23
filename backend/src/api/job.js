@@ -110,15 +110,14 @@ router.get('/search', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-// GET /api/jobs
+// GET /api/jobs (already exists)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const userEmail = req.user.email; // Gmail of logged-in user
+    const userEmail = req.user.email; // email from JWT
     const result = await pool.query(
       'SELECT * FROM jobs WHERE contact_email = $1 ORDER BY created_at DESC',
       [userEmail]
     );
-
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('Error fetching jobs:', err);
