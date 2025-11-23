@@ -138,13 +138,14 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/applicants/user/:id/applications
+// GET all applications for a user with job details
 router.get('/user/:id/applications', async (req, res) => {
   const userId = req.params.id;
 
   try {
     const result = await pool.query(
-      `SELECT a.id, a.job_id, a.status, a.position, a.applied_at, 
-              j.title AS job_title
+      `SELECT a.id AS application_id, a.job_id, a.status, a.position, a.applied_at,
+              j.title AS job_title, j.description AS job_description, j.contact_email
        FROM applicants a
        LEFT JOIN jobs j ON a.job_id = j.id
        WHERE a.user_id = $1
@@ -158,6 +159,7 @@ router.get('/user/:id/applications', async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
+
 // GET all applicants for a specific job
 router.get('/jobs/:jobId/applicants', async (req, res) => {
   const jobId = req.params.jobId;
