@@ -158,5 +158,27 @@ router.get('/user/:id/applications', async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
+// GET all applicants for a specific job
+router.get('/jobs/:jobId/applicants', async (req, res) => {
+  const jobId = req.params.jobId;
+
+  try {
+    const result = await pool.query(
+      `SELECT a.id AS id, a.user_id, a.status, a.position, a.applied_at,
+              u.first_name, u.last_name, u.email, u.phone,
+              a.cover_letter, a.skills, a.location, a.experience, a.resume_url
+       FROM applicants a
+       LEFT JOIN users u ON a.user_id = u.id
+       WHERE a.job_id = $1
+       ORDER BY a.applied_at DESC`,
+      [jobId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching applicants:", err);
+    res.status(500).json({ error: "Internal server error", details: err.message });
+  }
+});
 
 export default router;
