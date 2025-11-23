@@ -14,8 +14,9 @@ router.post('/', async (req, res) => {
   location = null,
   cover_letter = null,
   resume_url = null,
-  skills = []
+  skills = null
 } = req.body;
+
 
 
     if (!job_id || !user_id) {
@@ -45,7 +46,7 @@ router.post('/', async (req, res) => {
     location,
     cover_letter,
     resume_url,
-    skills.length ? JSON.stringify(skills) : null
+    skills ? JSON.stringify(skills) : null
   ]
 );
 
