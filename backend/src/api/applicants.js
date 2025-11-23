@@ -1,4 +1,3 @@
-// src/api/applicants.js
 import express from 'express';
 import pool from '../../db.js';
 
@@ -18,13 +17,11 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
         u.phone,
         u.profile_pic
        FROM applicants a
-       JOIN users u ON a.id = u.id  -- match users.id
+       JOIN users u ON a.user_id = u.id
        WHERE a.job_id = $1
        ORDER BY a.applied_at DESC`,
       [jobId]
     );
-
-    if (result.rows.length === 0) return res.status(200).json([]);
 
     const applicants = result.rows.map(applicant => ({
       id: applicant.id,
@@ -81,7 +78,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       job_id,
-      id, // user ID from users table
+      user_id, // <- this should match users.id
       position = null,
       experience = null,
       location = null,
@@ -90,14 +87,14 @@ router.post('/', async (req, res) => {
       skills = []
     } = req.body;
 
-    if (!job_id || !id) {
-      return res.status(400).json({ error: 'Missing required job_id or user id' });
+    if (!job_id || !user_id) {
+      return res.status(400).json({ error: 'Missing required job_id or user_id' });
     }
 
     // Check if user already applied
     const existingApplication = await pool.query(
-      'SELECT id FROM applicants WHERE job_id = $1 AND id = $2', // match applicants.id = user id
-      [job_id, id]
+      'SELECT id FROM applicants WHERE job_id = $1 AND user_id = $2',
+      [job_id, user_id]
     );
 
     if (existingApplication.rows.length > 0) {
@@ -106,12 +103,12 @@ router.post('/', async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO applicants 
-       (job_id, id, position, experience, location, cover_letter, resume_url, skills, status)
+       (job_id, user_id, position, experience, location, cover_letter, resume_url, skills, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
        RETURNING *`,
       [
         job_id,
-        id,
+        user_id,
         position,
         experience,
         location,
@@ -127,7 +124,7 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error submitting application:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
