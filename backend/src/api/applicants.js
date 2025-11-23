@@ -143,15 +143,14 @@ router.get('/user/:id/applications', async (req, res) => {
 
   try {
     const result = await pool.query(
-  `SELECT a.id, a.job_id, a.status, a.position, a.applied_at, 
-          j.title AS job_title
-   FROM applicants a
-   LEFT JOIN jobs j ON a.job_id = j.id
-   WHERE a.user_id = $1
-   ORDER BY a.applied_at DESC`,
-  [userId]
-);
-
+      `SELECT a.id, a.job_id, a.status, a.position, a.applied_at, 
+              j.title AS job_title
+       FROM applicants a
+       LEFT JOIN jobs j ON a.job_id = j.id
+       WHERE a.user_id = $1
+       ORDER BY a.applied_at DESC`,
+      [userId]
+    );
 
     res.json(result.rows);
   } catch (err) {
