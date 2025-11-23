@@ -74,11 +74,11 @@ router.put('/:applicantId', async (req, res) => {
 });
 
 // -------------------- POST /api/applicants -------------------- //
+// -------------------- POST /api/applicants -------------------- //
 router.post('/', async (req, res) => {
   try {
     const {
       job_id,
-      id, // <- this must match users.id
       position = null,
       experience = null,
       location = null,
@@ -87,28 +87,18 @@ router.post('/', async (req, res) => {
       skills = []
     } = req.body;
 
-    if (!job_id || !id) {
-      return res.status(400).json({ error: 'Missing required job_id or user id' });
+    if (!job_id) {
+      return res.status(400).json({ error: 'Missing required job_id' });
     }
 
-    // Check if user already applied
-    const existingApplication = await pool.query(
-      'SELECT id FROM applicants WHERE job_id = $1 AND id = $2',
-      [job_id, id]
-    );
-
-    if (existingApplication.rows.length > 0) {
-      return res.status(400).json({ error: 'You have already applied for this job' });
-    }
-
+    // Insert application without any user reference
     const result = await pool.query(
       `INSERT INTO applicants 
-       (job_id, id, position, experience, location, cover_letter, resume_url, skills, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+       (job_id, position, experience, location, cover_letter, resume_url, skills, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
        RETURNING *`,
       [
         job_id,
-        id,
         position,
         experience,
         location,
@@ -127,5 +117,6 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
+
 
 export default router;
