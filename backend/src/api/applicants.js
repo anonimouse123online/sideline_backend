@@ -1,15 +1,21 @@
+// backend/routes/applicants.js
 import express from 'express';
 import pool from '../../db.js';
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Load env variables
 
 const router = express.Router();
 
-// Gmail transporter
+// Brevo SMTP transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false, // TLS false for port 587
   auth: {
-    user: 'paulkurtperocillo@gmail.com',
-    pass: 'wypmuzgtcxcymvfh',
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
   },
 });
 
@@ -55,38 +61,27 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Try inserting
-    let inserted;
-    try {
-      inserted = await pool.query(
-        `INSERT INTO applicants 
-         (job_id, user_id, experience, location, cover_letter, resume_url, skills, status, position, applied_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8,NOW())
-         RETURNING *`,
-        [
-          job_id,
-          user_id,
-          experience,
-          location,
-          cover_letter,
-          resume_url,
-          skills ? JSON.stringify(skills) : null,
-          position
-        ]
-      );
-    } catch (sqlErr) {
-      console.error("❌ SQL Insert Error:", sqlErr.message);
-
-      return res.status(500).json({
-        error: "Database insert failed",
-        details: sqlErr.message,
-        hint: "Check NOT NULL columns or column types in applicants table"
-      });
-    }
+    // Insert application
+    const inserted = await pool.query(
+      `INSERT INTO applicants 
+       (job_id, user_id, experience, location, cover_letter, resume_url, skills, status, position, applied_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8,NOW())
+       RETURNING *`,
+      [
+        job_id,
+        user_id,
+        experience,
+        location,
+        cover_letter,
+        resume_url,
+        skills ? JSON.stringify(skills) : null,
+        position
+      ]
+    );
 
     const application = inserted.rows[0];
 
-    // Respond immediately
+    // Respond immediately to client
     res.status(201).json({
       message: 'Application submitted successfully',
       application
@@ -119,7 +114,7 @@ router.post('/', async (req, res) => {
       `;
 
       const mailOptions = {
-        from: '"Sideline Jobs" <paulkurtperocillo@gmail.com>',
+        from: '"Sideline Jobs" <no-reply@sideline.com>',
         to: job.contact_email,
         subject: `New Application: ${job.title}`,
         html: emailHTML
