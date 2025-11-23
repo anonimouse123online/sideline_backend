@@ -55,19 +55,12 @@ router.post('/', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     // Insert job into PostgreSQL
-    // Convert optional fields
-const startDateValue = startDate && startDate.trim() !== '' ? startDate : null;
-const deadlineValue = deadline && deadline.trim() !== '' ? deadline : null;
-const minBudgetValue = minBudget != null ? minBudget : null;
-const maxBudgetValue = maxBudget != null ? maxBudget : null;
-
-// Use in INSERT
-const result = await pool.query(
+    const result = await pool.query(
   `INSERT INTO jobs
     (title, description, category, skills, job_type, location, duration, start_date,
      payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions)
    VALUES
-    ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
    RETURNING *`,
   [
     title,
@@ -77,13 +70,13 @@ const result = await pool.query(
     jobType,
     location,
     duration,
-    startDateValue,
+    startDate || null,
     paymentType,
-    minBudgetValue,
-    maxBudgetValue,
+    minBudget,
+    maxBudget,
     currency,
     contact_email,
-    deadlineValue,
+    deadline || null,
     JSON.stringify(screeningQuestions)
   ]
 );
