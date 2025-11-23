@@ -63,5 +63,22 @@ router.post('/', async (req, res) => {
     });
   }
 });
+// -------------------- GET /api/applicants/jobs/:jobId/applicants -------------------- //
+router.get('/jobs/:jobId/applicants', async (req, res) => {
+  const { jobId } = req.params;
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM applicants WHERE job_id = $1',
+      [jobId]
+    );
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching applicants:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 export default router;
