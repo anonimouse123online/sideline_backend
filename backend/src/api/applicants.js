@@ -180,7 +180,7 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
-// PUT /api/applicants/:id → update application status
+// Update application status
 router.put('/:id', async (req, res) => {
   const applicationId = req.params.id;
   const { status } = req.body;
