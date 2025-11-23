@@ -248,5 +248,35 @@ router.get('/verify-account', async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
+// GET /api/users/count
+router.get('/users/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM users');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/jobs/count
+router.get('/jobs/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM jobs');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/applicants/count
+router.get('/applicants/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM applicants');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 export default router;
