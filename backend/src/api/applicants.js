@@ -63,13 +63,16 @@ router.post('/', async (req, res) => {
     });
   }
 });
-// -------------------- GET /api/applicants/jobs/:jobId/applicants -------------------- //
+// src/api/applicants.js
 router.get('/jobs/:jobId/applicants', async (req, res) => {
   const { jobId } = req.params;
 
   try {
     const result = await pool.query(
-      'SELECT * FROM applicants WHERE job_id = $1',
+      `SELECT a.*, u.first_name, u.last_name, u.email, u.phone, u.profile_pic
+       FROM applicants a
+       JOIN users u ON a.user_id = u.id
+       WHERE a.job_id = $1`,
       [jobId]
     );
 
