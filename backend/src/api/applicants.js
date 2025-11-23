@@ -82,6 +82,34 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+// Update applicant status
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ error: 'Missing status' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE applicants
+       SET status = $1
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Applicant not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating applicant status:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 export default router;
