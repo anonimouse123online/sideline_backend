@@ -70,13 +70,13 @@ router.post('/', authenticateToken, async (req, res) => {
     jobType,
     location,
     duration,
-    startDate,
+    startDateValue,                  // ✅ use null if empty
     paymentType,
     minBudget,
     maxBudget,
     currency,
     contact_email,
-    deadline,
+    deadline || null,                // same for deadline
     JSON.stringify(screeningQuestions)
   ]
 );
