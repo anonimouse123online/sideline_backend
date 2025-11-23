@@ -110,5 +110,22 @@ router.get('/search', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+// -------------------- GET /api/jobs/user?email= -------------------- //
+router.get('/user', async (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: "Email query parameter is required" });
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM jobs WHERE contact_email = $1 ORDER BY created_at DESC',
+      [email]
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Error fetching user jobs:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 export default router;
