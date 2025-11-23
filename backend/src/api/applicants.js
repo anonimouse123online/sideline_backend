@@ -180,5 +180,33 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
+// PUT /api/applicants/:id → update application status
+router.put('/:id', async (req, res) => {
+  const applicationId = req.params.id;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ error: "Missing 'status' in request body" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE applicants
+       SET status = $1
+       WHERE id = $2
+       RETURNING *`,
+      [status, applicationId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    res.json({ message: 'Status updated', application: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error updating application status:", err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
 
 export default router;
