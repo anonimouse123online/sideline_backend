@@ -137,4 +137,26 @@ router.post('/', async (req, res) => {
   }
 });
 
+// GET /api/applicants/user/:id/applications
+router.get('/user/:id/applications', async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT a.id, a.job_id, a.status, a.position, a.applied_at, 
+              j.title AS job_title, j.company_name
+       FROM applicants a
+       LEFT JOIN jobs j ON a.job_id = j.id
+       WHERE a.user_id = $1
+       ORDER BY a.applied_at DESC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching applications:", err);
+    res.status(500).json({ error: "Internal server error", details: err.message });
+  }
+});
+
 export default router;
