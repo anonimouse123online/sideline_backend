@@ -110,6 +110,16 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+// Example Node/Express route
+app.get('/api/applicants/user/:id/applications', async (req, res) => {
+  const userId = req.params.id;
+  const applications = await db.query(
+    'SELECT * FROM applicants WHERE user_id = $1', 
+    [userId]
+  );
+  res.json(applications.rows);
+});
+
 
 
 export default router;
