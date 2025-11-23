@@ -84,8 +84,7 @@ const result = await pool.query(
     currency,
     contact_email,
     deadlineValue,
-    JSON.stringify(screeningQuestions),
-    userId
+    JSON.stringify(screeningQuestions)
   ]
 );
 
