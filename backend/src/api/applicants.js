@@ -1,9 +1,19 @@
 import express from 'express';
 import pool from '../../db.js';
+import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
-// POST /api/applicants
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'paulkurtperocillo@gmail.com', // your Gmail
+    pass: 'wypmuzgtcxcymvfh',           // your App Password
+  },
+});
+
+// POST /api/applicants - apply for a job
 router.post('/', async (req, res) => {
   const {
     job_id,
@@ -20,14 +30,16 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    // Check if user already applied
     const existing = await pool.query(
-      'SELECT id FROM applicants WHERE job_id = $1 AND user_id = $2',
+      'SELECT id FROM applicants WHERE job_id=$1 AND user_id=$2',
       [job_id, user_id]
     );
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'You have already applied for this job' });
     }
 
+    // Insert application
     const result = await pool.query(
       `INSERT INTO applicants 
        (job_id, user_id, experience, location, cover_letter, resume_url, skills, status, applied_at)
@@ -36,7 +48,49 @@ router.post('/', async (req, res) => {
       [job_id, user_id, experience, location, cover_letter, resume_url, skills ? JSON.stringify(skills) : null]
     );
 
-    res.status(201).json({ message: 'Application submitted successfully', application: result.rows[0] });
+    const application = result.rows[0];
+
+    // Fetch job and client info to send email
+    const jobRes = await pool.query(
+      `SELECT j.title, j.description, j.contact_email, u.first_name AS client_first_name, u.last_name AS client_last_name
+       FROM jobs j
+       JOIN users u ON j.contact_email = u.email
+       WHERE j.id = $1`,
+      [job_id]
+    );
+
+    if (jobRes.rows.length > 0) {
+      const job = jobRes.rows[0];
+
+      // Compose email
+      const mailOptions = {
+        from: '"Sideline Jobs" <paulkurtperocillo@gmail.com>',
+        to: job.contact_email, // client email
+        subject: `New Application for Your Job: ${job.title}`,
+        html: `
+          <p>Hi ${job.client_first_name},</p>
+          <p>You have a new applicant for your job posting: <strong>${job.title}</strong>.</p>
+          <p><strong>Applicant Details:</strong></p>
+          <ul>
+            <li>Experience: ${experience || 'N/A'}</li>
+            <li>Location: ${location || 'N/A'}</li>
+            <li>Cover Letter: ${cover_letter || 'N/A'}</li>
+            <li>Resume: ${resume_url ? `<a href="${resume_url}">View Resume</a>` : 'N/A'}</li>
+            <li>Skills: ${skills ? skills.join(', ') : 'N/A'}</li>
+          </ul>
+          <p>Please check your Sideline dashboard for more details.</p>
+          <p>Best regards,<br/>Sideline Team</p>
+        `
+      };
+
+      // Send email
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) console.error('Error sending email:', err);
+        else console.log('Email sent:', info.response);
+      });
+    }
+
+    res.status(201).json({ message: 'Application submitted successfully', application });
   } catch (err) {
     console.error('Error submitting application:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -97,6 +151,5 @@ router.get('/user/:id/applications', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 export default router;
