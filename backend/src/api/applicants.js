@@ -211,4 +211,42 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// POST /api/verify-account
+router.post('/verify-account', async (req, res) => {
+  const { user_id, status } = req.body;
+
+  if (!user_id || !status) {
+    return res.status(400).json({ error: "user_id and status are required" });
+  }
+
+  try {
+    const result = await pool.query(
+      "INSERT INTO account_verifications (user_id, status) VALUES ($1, $2) RETURNING *",
+      [user_id, status]
+    );
+
+    res.status(201).json({ message: "Verification submitted", verification: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error submitting verification:", err);
+    res.status(500).json({ error: "Internal server error", details: err.message });
+  }
+});
+
+// GET /api/verify-account (Admin view)
+router.get('/verify-account', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT v.id, v.status, v.created_at, u.first_name, u.last_name, u.email
+       FROM account_verifications v
+       JOIN users u ON u.id = v.user_id
+       ORDER BY v.created_at DESC`
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching verifications:", err);
+    res.status(500).json({ error: "Internal server error", details: err.message });
+  }
+});
+
 export default router;
