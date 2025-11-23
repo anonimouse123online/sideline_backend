@@ -98,4 +98,5 @@ router.get('/user/:id/applications', async (req, res) => {
   }
 });
 
+
 export default router;
