@@ -2,7 +2,6 @@
 import express from 'express';
 import pool from '../../db.js';
 import dotenv from 'dotenv';
-import fetch from 'node-fetch'; // Make sure node-fetch is installed
 
 dotenv.config();
 
@@ -106,18 +105,19 @@ router.post('/', async (req, res) => {
 
       try {
         const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "api-key": BREVO_API_KEY
-          },
-          body: JSON.stringify({
-            sender: { name: "Sideline Jobs", email: "no-reply@sideline.com" },
-            to: [{ email: job.contact_email }],
-            subject: `New Application: ${job.title}`,
-            htmlContent: emailHTML
-          })
-        });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "api-key": BREVO_API_KEY
+  },
+  body: JSON.stringify({
+    sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
+    to: [{ email: job.contact_email }],
+    subject: `New Application: ${job.title}`,
+    htmlContent: emailHTML
+  })
+});
+
 
         const result = await response.json();
         console.log("📧 Email sent via Brevo API:", result);
