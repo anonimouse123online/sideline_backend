@@ -201,7 +201,6 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });
-// PUT /api/applicants/:id/sent-email
 // PUT /api/applicants/:userId/sent-email
 router.put('/:userId/sent-email', async (req, res) => {
   const userId = parseInt(req.params.userId);
@@ -211,11 +210,13 @@ router.put('/:userId/sent-email', async (req, res) => {
     return res.status(400).json({ error: "sent_email must be true or false" });
   }
 
-  try {
-    // Determine new status
-    const newStatus = sent_email ? "approved" : "pending";
+  const newStatus = sent_email ? "approved" : "pending";
 
-    // 1️⃣ Check for existing verification
+  try {
+    // Log input
+    console.log("Updating verification:", { userId, sent_email, newStatus });
+
+    // Check existing verification
     const verificationRes = await pool.query(
       `SELECT * FROM account_verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
       [userId]
@@ -224,7 +225,7 @@ router.put('/:userId/sent-email', async (req, res) => {
     let verification = verificationRes.rows[0];
 
     if (!verification) {
-      // 2️⃣ Create if it doesn't exist
+      // Create new
       const createRes = await pool.query(
         `INSERT INTO account_verifications (user_id, sent_email, status, created_at, updated_at)
          VALUES ($1, $2, $3, NOW(), NOW())
@@ -241,7 +242,7 @@ router.put('/:userId/sent-email', async (req, res) => {
       });
     }
 
-    // 3️⃣ Update existing verification
+    // Update existing
     const updateRes = await pool.query(
       `UPDATE account_verifications
        SET sent_email = $1, status = $2, updated_at = NOW()
@@ -252,7 +253,6 @@ router.put('/:userId/sent-email', async (req, res) => {
 
     verification = updateRes.rows[0];
 
-    // ✅ Respond with verification + immediate status for frontend
     res.json({
       success: true,
       message: `Email sent status updated to ${sent_email}`,
@@ -265,6 +265,5 @@ router.put('/:userId/sent-email', async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
-
 
 export default router;
