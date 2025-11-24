@@ -6,7 +6,6 @@ const router = express.Router();
 
 // -------------------- DASHBOARD STATS -------------------- //
 
-// Users count
 router.get('/users/count', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) FROM users');
@@ -17,7 +16,6 @@ router.get('/users/count', async (req, res) => {
   }
 });
 
-// Jobs count
 router.get('/jobs/count', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) FROM jobs');
@@ -28,7 +26,6 @@ router.get('/jobs/count', async (req, res) => {
   }
 });
 
-// Applicants count
 router.get('/applicants/count', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) FROM applicants');
@@ -57,7 +54,7 @@ router.get('/verify-account', async (req, res) => {
   }
 });
 
-// POST to update verification status (approve/reject)
+// POST to create/update verification status (safe, no ON CONFLICT)
 router.post('/verify-account', async (req, res) => {
   const { user_id, status } = req.body;
   if (!user_id || !status) {
@@ -65,14 +62,28 @@ router.post('/verify-account', async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
-      `INSERT INTO account_verifications (user_id, status)
-       VALUES ($1, $2) 
-       ON CONFLICT (user_id) DO UPDATE SET status = EXCLUDED.status
+    // Try UPDATE first
+    const update = await pool.query(
+      `UPDATE account_verifications
+       SET status = $1, updated_at = NOW()
+       WHERE user_id = $2
        RETURNING *`,
-      [user_id, status]
+      [status, user_id]
     );
-    res.status(201).json({ message: "Verification updated", verification: result.rows[0] });
+
+    if (update.rows.length === 0) {
+      // If no row updated, INSERT new
+      const insert = await pool.query(
+        `INSERT INTO account_verifications (user_id, status, created_at, updated_at)
+         VALUES ($1, $2, NOW(), NOW())
+         RETURNING *`,
+        [user_id, status]
+      );
+      return res.status(201).json({ message: "Verification created", verification: insert.rows[0] });
+    }
+
+    res.status(200).json({ message: "Verification updated", verification: update.rows[0] });
+
   } catch (err) {
     console.error("❌ Error updating verification:", err);
     res.status(500).json({ error: err.message });
@@ -81,7 +92,6 @@ router.post('/verify-account', async (req, res) => {
 
 // -------------------- FULL LISTS FOR ADMIN -------------------- //
 
-// Get all users
 router.get('/users', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
@@ -92,7 +102,6 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// Get all jobs
 router.get('/jobs', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM jobs ORDER BY id DESC');
@@ -103,7 +112,6 @@ router.get('/jobs', async (req, res) => {
   }
 });
 
-// Get all applicants
 router.get('/applicants', async (req, res) => {
   try {
     const result = await pool.query(
@@ -119,7 +127,8 @@ router.get('/applicants', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// PUT /api/admin/verify-account/:id
+
+// PUT /api/admin/verify-account/:id — update by verification id
 router.put('/verify-account/:id', async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -129,7 +138,7 @@ router.put('/verify-account/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE account_verifications
-       SET status = $1
+       SET status = $1, updated_at = NOW()
        WHERE id = $2
        RETURNING *`,
       [status, id]
@@ -145,6 +154,5 @@ router.put('/verify-account/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 export default router;
