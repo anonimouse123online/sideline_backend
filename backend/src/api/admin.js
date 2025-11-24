@@ -156,10 +156,17 @@ router.get('/applicants', async (req, res) => {
 });
 
 // PUT /api/admin/applicants/:id — update applicant status
+// PUT /api/admin/applicants/:id — update applicant status
 router.put('/applicants/:id', async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
-  if (!status) return res.status(400).json({ error: "Status is required" });
+  let { status } = req.body;
+
+  const validStatuses = ['pending', 'approved', 'rejected'];
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(', ')}` });
+  }
+
+  status = status.trim(); // remove extra whitespace
 
   try {
     const result = await pool.query(
