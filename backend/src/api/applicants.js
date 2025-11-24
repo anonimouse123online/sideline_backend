@@ -203,7 +203,7 @@ router.put('/:id', async (req, res) => {
 });
 // PUT /api/applicants/:id/sent-email
 router.put('/:id/sent-email', async (req, res) => {
-  const applicantId = req.params.id;
+  const verificationId = req.params.id;
   const { sent_email } = req.body;
 
   if (typeof sent_email !== "boolean") {
@@ -212,26 +212,27 @@ router.put('/:id/sent-email', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `UPDATE applicants
+      `UPDATE account_verifications
        SET sent_email = $1
        WHERE id = $2
        RETURNING *`,
-      [sent_email, applicantId]
+      [sent_email, verificationId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Applicant not found" });
+      return res.status(404).json({ error: "Verification record not found" });
     }
 
     res.json({
       message: `Email sent status updated to ${sent_email}`,
-      applicant: result.rows[0]
+      verification: result.rows[0]
     });
   } catch (err) {
     console.error("❌ Error updating sent_email:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 export default router;
