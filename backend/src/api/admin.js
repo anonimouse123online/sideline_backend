@@ -160,7 +160,7 @@ router.put('/applicants/:id', async (req, res) => {
 
   if (!status) return res.status(400).json({ error: "Status is required" });
 
-  status = status.trim().toLowerCase(); // sanitize
+  status = status.trim().toLowerCase();
   const validStatuses = ["pending", "approved", "rejected"];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(", ")}` });
@@ -183,6 +183,5 @@ router.put('/applicants/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 export default router;
