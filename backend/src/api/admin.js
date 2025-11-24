@@ -230,20 +230,23 @@ router.get('/verify-account/user/:userId', async (req, res) => {
   }
 });
 // backend/routes/admin.js
+r// PUT verification by userId (create or update)
 router.put('/verify-account/:userId', async (req, res) => {
   const { userId } = req.params;
   const { status } = req.body;
+  if (!status) return res.status(400).json({ error: "Status is required" });
 
   try {
-    // Check existing verification
+    // Check if verification exists
     const existing = await pool.query(
       `SELECT * FROM account_verifications WHERE user_id = $1`,
       [userId]
     );
 
     let verification;
+
     if (existing.rows.length === 0) {
-      // Create new verification if none exists
+      // Create new verification
       const insertRes = await pool.query(
         `INSERT INTO account_verifications (user_id, status, created_at, sent_email)
          VALUES ($1, $2, NOW(), false)
@@ -252,7 +255,7 @@ router.put('/verify-account/:userId', async (req, res) => {
       );
       verification = insertRes.rows[0];
     } else {
-      // Update existing
+      // Update existing verification
       const updateRes = await pool.query(
         `UPDATE account_verifications
          SET status = $1, updated_at = NOW()
@@ -269,6 +272,7 @@ router.put('/verify-account/:userId', async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 export default router;
