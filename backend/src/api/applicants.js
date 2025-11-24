@@ -242,13 +242,13 @@ router.put('/:userId/sent-email', async (req, res) => {
     }
 
     // 3️⃣ Update existing verification
-    const updateRes = await pool.query(
-      `UPDATE account_verifications
-       SET sent_email = $1, updated_at = NOW()
-       WHERE id = $2
-       RETURNING *`,
-      [sent_email, verification.id]
-    );
+   const updateRes = await pool.query(
+  `UPDATE account_verifications
+   SET sent_email = $1
+   WHERE id = $2
+   RETURNING *`,
+  [sent_email, verification.id]
+);
 
     res.json({
       message: `Email sent status updated to ${sent_email}`,
