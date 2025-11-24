@@ -5,7 +5,6 @@ import pool from '../../db.js';
 const router = express.Router();
 
 // -------------------- DASHBOARD STATS -------------------- //
-
 router.get('/users/count', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) FROM users');
@@ -57,9 +56,7 @@ router.get('/verify-account', async (req, res) => {
 // POST to create/update verification status
 router.post('/verify-account', async (req, res) => {
   const { user_id, status } = req.body;
-  if (!user_id || !status) {
-    return res.status(400).json({ error: "user_id and status are required" });
-  }
+  if (!user_id || !status) return res.status(400).json({ error: "user_id and status are required" });
 
   try {
     const update = await pool.query(
@@ -81,18 +78,16 @@ router.post('/verify-account', async (req, res) => {
     }
 
     res.status(200).json({ message: "Verification updated", verification: update.rows[0] });
-
   } catch (err) {
     console.error("❌ Error updating verification:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// PUT /api/admin/verify-account/:id — update by verification id
+// PUT verification by ID
 router.put('/verify-account/:id', async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-
   if (!status) return res.status(400).json({ error: "Status is required" });
 
   try {
@@ -104,9 +99,7 @@ router.put('/verify-account/:id', async (req, res) => {
       [status, id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Verification not found" });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ error: "Verification not found" });
 
     res.json({ message: `Verification ${status}`, verification: result.rows[0] });
   } catch (err) {
@@ -137,7 +130,7 @@ router.get('/jobs', async (req, res) => {
   }
 });
 
-// GET all applicants (with verification info)
+// GET all applicants with verification info
 router.get('/applicants', async (req, res) => {
   try {
     const result = await pool.query(
@@ -158,6 +151,30 @@ router.get('/applicants', async (req, res) => {
     res.json(applicantsWithVerification);
   } catch (err) {
     console.error("❌ Error fetching applicants:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/applicants/:id — update applicant status
+router.put('/applicants/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: "Status is required" });
+
+  try {
+    const result = await pool.query(
+      `UPDATE applicants
+       SET status = $1
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: "Applicant not found" });
+
+    res.json({ message: `Applicant status updated to ${status}`, applicant: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error updating applicant:", err);
     res.status(500).json({ error: err.message });
   }
 });
