@@ -210,13 +210,17 @@ router.put('/:userId/sent-email', async (req, res) => {
     return res.status(400).json({ error: "sent_email must be true or false" });
   }
 
-  const newStatus = sent_email ? "approved" : "pending";
-
   try {
-    // Log input
-    console.log("Updating verification:", { userId, sent_email, newStatus });
+    // Determine new status
+    const newStatus = sent_email ? "approved" : "pending";
 
-    // Check existing verification
+    // Check if the user exists
+    const userRes = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check for existing verification
     const verificationRes = await pool.query(
       `SELECT * FROM account_verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
       [userId]
@@ -225,14 +229,13 @@ router.put('/:userId/sent-email', async (req, res) => {
     let verification = verificationRes.rows[0];
 
     if (!verification) {
-      // Create new
+      // Create verification if none exists
       const createRes = await pool.query(
         `INSERT INTO account_verifications (user_id, sent_email, status, created_at, updated_at)
          VALUES ($1, $2, $3, NOW(), NOW())
          RETURNING *`,
         [userId, sent_email, newStatus]
       );
-
       verification = createRes.rows[0];
       return res.status(201).json({
         success: true,
@@ -242,7 +245,7 @@ router.put('/:userId/sent-email', async (req, res) => {
       });
     }
 
-    // Update existing
+    // Update existing verification
     const updateRes = await pool.query(
       `UPDATE account_verifications
        SET sent_email = $1, status = $2, updated_at = NOW()
@@ -265,5 +268,6 @@ router.put('/:userId/sent-email', async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
+
 
 export default router;
