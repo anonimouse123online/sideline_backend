@@ -154,5 +154,30 @@ router.put('/verify-account/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.get('/applicants', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.applied_at,
+              u.first_name, u.last_name, u.email,
+              v.status AS verification_status
+       FROM applicants a
+       LEFT JOIN users u ON a.user_id = u.id
+       LEFT JOIN account_verifications v ON v.user_id = a.user_id
+       ORDER BY a.applied_at DESC`
+    );
+
+    // Map verification status to a boolean
+    const applicantsWithVerification = result.rows.map(a => ({
+      ...a,
+      verificationSent: a.verification_status ? true : false
+    }));
+
+    res.json(applicantsWithVerification);
+  } catch (err) {
+    console.error("❌ Error fetching applicants:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 export default router;
