@@ -97,9 +97,10 @@ router.get('/jobs', async (req, res) => {
 router.get('/applicants', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.sent_email, a.applied_at,
+      SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.applied_at,
              u.first_name, u.last_name, u.email,
-             v.status AS verification_status
+             v.status AS verification_status,
+             v.sent_email
       FROM applicants a
       LEFT JOIN users u ON a.user_id = u.id
       LEFT JOIN account_verifications v ON v.user_id = a.user_id
@@ -108,6 +109,7 @@ router.get('/applicants', async (req, res) => {
 
     const applicants = result.rows.map(a => ({
       ...a,
+      sent_email: !!a.sent_email,           // now from account_verifications
       verificationSent: !!a.verification_status
     }));
 
@@ -117,6 +119,7 @@ router.get('/applicants', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // PUT applicant status by ID
 router.put('/applicants/:id', async (req, res) => {
@@ -150,51 +153,33 @@ router.put('/applicants/:id', async (req, res) => {
 });
 
 // backend/routes/admin.js
-router.put('/verify-account/:userId', async (req, res) => {
-  const { userId } = req.params;
+// Update verification by account_verifications.id
+router.put('/verify-account/:id', async (req, res) => {
+  const { id } = req.params;
   const { status } = req.body;
 
   if (!status) return res.status(400).json({ error: "Status is required" });
 
-  // Normalize status
   const normalizedStatus = status.trim().toLowerCase();
-
-  // Optional: validate allowed statuses
   const validStatuses = ["pending", "approved", "rejected"];
   if (!validStatuses.includes(normalizedStatus)) {
     return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(", ")}` });
   }
 
   try {
-    const existing = await pool.query(
-      `SELECT * FROM account_verifications WHERE user_id = $1`,
-      [userId]
+    const result = await pool.query(
+      `UPDATE account_verifications
+       SET status = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [normalizedStatus, id]
     );
 
-    let verification;
-
-    if (existing.rows.length === 0) {
-      // Create new verification
-      const insertRes = await pool.query(
-        `INSERT INTO account_verifications (user_id, status, created_at, sent_email)
-         VALUES ($1, $2, NOW(), false)
-         RETURNING *`,
-        [userId, normalizedStatus]
-      );
-      verification = insertRes.rows[0];
-    } else {
-      // Update existing verification
-      const updateRes = await pool.query(
-        `UPDATE account_verifications
-         SET status = $1, updated_at = NOW()
-         WHERE user_id = $2
-         RETURNING *`,
-        [normalizedStatus, userId]
-      );
-      verification = updateRes.rows[0];
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Verification not found" });
     }
 
-    res.json({ message: `Verification ${normalizedStatus}`, verification });
+    res.json({ message: `Verification ${normalizedStatus}`, verification: result.rows[0] });
   } catch (err) {
     console.error("❌ Error updating verification:", err);
     res.status(500).json({ error: "Internal server error" });
