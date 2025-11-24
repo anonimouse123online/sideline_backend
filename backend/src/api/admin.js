@@ -214,6 +214,21 @@ router.get('/verify-account/user/:userId', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// backend/routes/admin.js
+router.get('/verify-account/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM account_verifications WHERE user_id = $1`,
+      [userId]
+    );
+    if (result.rows.length === 0) return res.json({ status: null });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 
