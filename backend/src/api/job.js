@@ -142,11 +142,15 @@ router.get('/:id', async (req, res) => {
 // Fetch jobs posted by logged-in user
 router.get('/user/me', authenticateToken, async (req, res) => {
   try {
-    const userEmail = req.user.email; // email from JWT
+    const userEmail = req.user.email;
+    console.log("📌 JWT email for fetching jobs:", userEmail);
+
     const result = await pool.query(
       'SELECT * FROM jobs WHERE contact_email = $1 ORDER BY created_at DESC',
       [userEmail]
     );
+
+    console.log("📥 Jobs fetched for user:", result.rows);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('Error fetching user jobs:', err);
