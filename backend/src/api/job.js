@@ -96,6 +96,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// -------------------- GET /api/jobs/count -------------------- //
+router.get('/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM jobs');
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error counting jobs:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // -------------------- GET /api/jobs/search?q= -------------------- //
 router.get('/search', async (req, res) => {
   const q = req.query.q || '';
@@ -110,8 +121,26 @@ router.get('/search', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-// GET /api/jobs (already exists)
-router.get('/', authenticateToken, async (req, res) => {
+
+// -------------------- GET /api/jobs/:id -------------------- //
+router.get('/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Job ID must be a number' });
+
+  try {
+    const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' });
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching job:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// -------------------- GET /api/jobs/user -------------------- //
+// Fetch jobs posted by logged-in user
+router.get('/user/me', authenticateToken, async (req, res) => {
   try {
     const userEmail = req.user.email; // email from JWT
     const result = await pool.query(
@@ -120,25 +149,9 @@ router.get('/', authenticateToken, async (req, res) => {
     );
     res.status(200).json(result.rows);
   } catch (err) {
-    console.error('Error fetching jobs:', err);
+    console.error('Error fetching user jobs:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-// GET /api/jobs/:id
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error('Error fetching job:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-
 
 export default router;
