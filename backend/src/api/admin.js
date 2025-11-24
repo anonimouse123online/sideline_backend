@@ -65,7 +65,7 @@ router.post('/verify-account', async (req, res) => {
     // Try UPDATE first
     const update = await pool.query(
       `UPDATE account_verifications
-       SET status = $1, updated_at = NOW()
+       SET status = $1
        WHERE user_id = $2
        RETURNING *`,
       [status, user_id]
@@ -74,8 +74,8 @@ router.post('/verify-account', async (req, res) => {
     if (update.rows.length === 0) {
       // If no row updated, INSERT new
       const insert = await pool.query(
-        `INSERT INTO account_verifications (user_id, status, created_at, updated_at)
-         VALUES ($1, $2, NOW(), NOW())
+        `INSERT INTO account_verifications (user_id, status, created_at)
+         VALUES ($1, $2, NOW())
          RETURNING *`,
         [user_id, status]
       );
@@ -138,7 +138,7 @@ router.put('/verify-account/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE account_verifications
-       SET status = $1, updated_at = NOW()
+       SET status = $1
        WHERE id = $2
        RETURNING *`,
       [status, id]
