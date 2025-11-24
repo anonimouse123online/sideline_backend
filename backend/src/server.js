@@ -13,6 +13,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import jobsRouter from './api/job.js'; // ✅ FIXED: Correct file name
 import applicantsRouter from './api/applicants.js';
+import adminRouter from './api/admin.js';
 
 dotenv.config();
 
@@ -293,6 +294,7 @@ const hashedPassword = password;
   // ✅ Use the imported routers - ALL jobs routes are in the router
   app.use('/api/jobs', jobsRouter);
   app.use('/api/applicants', applicantsRouter);
+  app.use('/api/admin', adminRouter);
 
   // ✅ NO DIRECT /api/jobs/* ROUTES HERE - All jobs routes are in jobsRouter
 

@@ -1,0 +1,123 @@
+// backend/routes/admin.js
+import express from 'express';
+import pool from '../../db.js';
+
+const router = express.Router();
+
+// -------------------- DASHBOARD STATS -------------------- //
+
+// Users count
+router.get('/users/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM users');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (err) {
+    console.error("❌ Error fetching users count:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jobs count
+router.get('/jobs/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM jobs');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (err) {
+    console.error("❌ Error fetching jobs count:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Applicants count
+router.get('/applicants/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM applicants');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (err) {
+    console.error("❌ Error fetching applicants count:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------- VERIFICATIONS -------------------- //
+
+// GET all account verifications (admin view)
+router.get('/verify-account', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT v.id, v.user_id, v.status, v.created_at, u.first_name, u.last_name, u.email
+       FROM account_verifications v
+       JOIN users u ON u.id = v.user_id
+       ORDER BY v.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching verifications:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST to update verification status (approve/reject)
+router.post('/verify-account', async (req, res) => {
+  const { user_id, status } = req.body;
+  if (!user_id || !status) {
+    return res.status(400).json({ error: "user_id and status are required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO account_verifications (user_id, status)
+       VALUES ($1, $2) 
+       ON CONFLICT (user_id) DO UPDATE SET status = EXCLUDED.status
+       RETURNING *`,
+      [user_id, status]
+    );
+    res.status(201).json({ message: "Verification updated", verification: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error updating verification:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------- FULL LISTS FOR ADMIN -------------------- //
+
+// Get all users
+router.get('/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching users:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all jobs
+router.get('/jobs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM jobs ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching jobs:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all applicants
+router.get('/applicants', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.applied_at,
+              u.first_name, u.last_name, u.email
+       FROM applicants a
+       LEFT JOIN users u ON a.user_id = u.id
+       ORDER BY a.applied_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching applicants:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;

@@ -24,7 +24,6 @@ router.post('/', async (req, res) => {
     position
   } = req.body;
 
-  // -------- VALIDATION --------
   const missingFields = [];
   if (!job_id) missingFields.push("job_id");
   if (!user_id) missingFields.push("user_id");
@@ -77,7 +76,7 @@ router.post('/', async (req, res) => {
       application
     });
 
-    // -------- FETCH USER & JOB INFO --------
+    // Async: fetch user and job info for email
     const [applicantRes, jobRes] = await Promise.all([
       pool.query(`SELECT first_name, last_name, email FROM users WHERE id=$1`, [user_id]),
       pool.query(`SELECT title, description, contact_email FROM jobs WHERE id=$1`, [job_id])
@@ -86,7 +85,6 @@ router.post('/', async (req, res) => {
     const applicant = applicantRes.rows[0];
     const job = jobRes.rows[0];
 
-    // -------- SEND EMAIL TO CLIENT VIA BREVO API ASYNC --------
     if (job?.contact_email) {
       const emailHTML = `
         <p>Hello,</p>
@@ -102,23 +100,20 @@ router.post('/', async (req, res) => {
           <li><strong>Resume:</strong> ${resume_url ? `<a href="${resume_url}">View Resume</a>` : 'N/A'}</li>
         </ul>
       `;
-
       try {
         const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "api-key": BREVO_API_KEY
-  },
-  body: JSON.stringify({
-    sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
-    to: [{ email: job.contact_email }],
-    subject: `New Application: ${job.title}`,
-    htmlContent: emailHTML
-  })
-});
-
-
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": BREVO_API_KEY
+          },
+          body: JSON.stringify({
+            sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
+            to: [{ email: job.contact_email }],
+            subject: `New Application: ${job.title}`,
+            htmlContent: emailHTML
+          })
+        });
         const result = await response.json();
         console.log("📧 Email sent via Brevo API:", result);
       } catch (err) {
@@ -137,11 +132,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/applicants/user/:id/applications
-// GET all applications for a user with job details
+// GET all applications for a user
 router.get('/user/:id/applications', async (req, res) => {
   const userId = req.params.id;
-
   try {
     const result = await pool.query(
       `SELECT a.id AS application_id, a.job_id, a.status, a.position, a.applied_at,
@@ -152,7 +145,6 @@ router.get('/user/:id/applications', async (req, res) => {
        ORDER BY a.applied_at DESC`,
       [userId]
     );
-
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Error fetching applications:", err);
@@ -163,7 +155,6 @@ router.get('/user/:id/applications', async (req, res) => {
 // GET all applicants for a specific job
 router.get('/jobs/:jobId/applicants', async (req, res) => {
   const jobId = req.params.jobId;
-
   try {
     const result = await pool.query(
       `SELECT a.id AS id, a.user_id, a.status, a.position, a.applied_at,
@@ -175,13 +166,13 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
        ORDER BY a.applied_at DESC`,
       [jobId]
     );
-
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Error fetching applicants:", err);
     res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
+
 // Update application status
 router.put('/:id', async (req, res) => {
   const applicationId = req.params.id;
@@ -210,109 +201,5 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });
-
-// POST /api/verify-account
-router.post('/verify-account', async (req, res) => {
-  const { user_id, status } = req.body;
-
-  if (!user_id || !status) {
-    return res.status(400).json({ error: "user_id and status are required" });
-  }
-
-  try {
-    const result = await pool.query(
-      "INSERT INTO account_verifications (user_id, status) VALUES ($1, $2) RETURNING *",
-      [user_id, status]
-    );
-
-    res.status(201).json({ message: "Verification submitted", verification: result.rows[0] });
-  } catch (err) {
-    console.error("❌ Error submitting verification:", err);
-    res.status(500).json({ error: "Internal server error", details: err.message });
-  }
-});
-
-// GET /api/verify-account (Admin view)
-router.get('/verify-account', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT v.id, v.status, v.created_at, u.first_name, u.last_name, u.email
-       FROM account_verifications v
-       JOIN users u ON u.id = v.user_id
-       ORDER BY v.created_at DESC`
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Error fetching verifications:", err);
-    res.status(500).json({ error: "Internal server error", details: err.message });
-  }
-});
-// GET /api/users/count
-router.get('/users/count', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT COUNT(*) FROM users');
-    res.json({ count: parseInt(result.rows[0].count) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/jobs/count
-router.get('/jobs/count', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT COUNT(*) FROM jobs');
-    res.json({ count: parseInt(result.rows[0].count) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/applicants/count
-router.get('/applicants/count', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT COUNT(*) FROM applicants');
-    res.json({ count: parseInt(result.rows[0].count) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// GET all applicants (for admin)
-router.get('/', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.applied_at,
-              u.first_name, u.last_name, u.email
-       FROM applicants a
-       LEFT JOIN users u ON a.user_id = u.id
-       ORDER BY a.applied_at DESC`
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// GET all users (for admin)
-router.get('/users', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET all jobs (for admin)
-router.get('/jobs', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM jobs ORDER BY id DESC');
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 
 export default router;
