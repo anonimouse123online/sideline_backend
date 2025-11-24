@@ -36,8 +36,7 @@ router.get('/applicants/count', async (req, res) => {
 });
 
 // -------------------- VERIFICATIONS -------------------- //
-
-// GET all account verifications (admin view)
+// GET all account verifications
 router.get('/verify-account', async (req, res) => {
   try {
     const result = await pool.query(
@@ -53,7 +52,7 @@ router.get('/verify-account', async (req, res) => {
   }
 });
 
-// POST to create/update verification status
+// POST to create or update verification
 router.post('/verify-account', async (req, res) => {
   const { user_id, status } = req.body;
   if (!user_id || !status) return res.status(400).json({ error: "user_id and status are required" });
@@ -109,7 +108,6 @@ router.put('/verify-account/:id', async (req, res) => {
 });
 
 // -------------------- FULL LISTS FOR ADMIN -------------------- //
-
 router.get('/users', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
@@ -155,18 +153,17 @@ router.get('/applicants', async (req, res) => {
   }
 });
 
-// PUT /api/admin/applicants/:id — update applicant status
-// PUT /api/admin/applicants/:id — update applicant status
+// PUT applicant status by ID
 router.put('/applicants/:id', async (req, res) => {
   const { id } = req.params;
   let { status } = req.body;
 
   const validStatuses = ['pending', 'approved', 'rejected'];
-  if (!status || !validStatuses.includes(status)) {
+  if (!status || !validStatuses.includes(status.trim())) {
     return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(', ')}` });
   }
 
-  status = status.trim(); // remove extra whitespace
+  status = status.trim();
 
   try {
     const result = await pool.query(
