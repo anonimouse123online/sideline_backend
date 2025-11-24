@@ -54,7 +54,7 @@ router.get('/verify-account', async (req, res) => {
   }
 });
 
-// POST to create/update verification status (safe, no ON CONFLICT)
+// POST to create/update verification status
 router.post('/verify-account', async (req, res) => {
   const { user_id, status } = req.body;
   if (!user_id || !status) {
@@ -62,7 +62,6 @@ router.post('/verify-account', async (req, res) => {
   }
 
   try {
-    // Try UPDATE first
     const update = await pool.query(
       `UPDATE account_verifications
        SET status = $1
@@ -72,7 +71,6 @@ router.post('/verify-account', async (req, res) => {
     );
 
     if (update.rows.length === 0) {
-      // If no row updated, INSERT new
       const insert = await pool.query(
         `INSERT INTO account_verifications (user_id, status, created_at)
          VALUES ($1, $2, NOW())
@@ -86,44 +84,6 @@ router.post('/verify-account', async (req, res) => {
 
   } catch (err) {
     console.error("❌ Error updating verification:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -------------------- FULL LISTS FOR ADMIN -------------------- //
-
-router.get('/users', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Error fetching users:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/jobs', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM jobs ORDER BY id DESC');
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Error fetching jobs:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/applicants', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.applied_at,
-              u.first_name, u.last_name, u.email
-       FROM applicants a
-       LEFT JOIN users u ON a.user_id = u.id
-       ORDER BY a.applied_at DESC`
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Error fetching applicants:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -154,6 +114,30 @@ router.put('/verify-account/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// -------------------- FULL LISTS FOR ADMIN -------------------- //
+
+router.get('/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching users:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/jobs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM jobs ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching jobs:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all applicants (with verification info)
 router.get('/applicants', async (req, res) => {
   try {
     const result = await pool.query(
@@ -166,10 +150,9 @@ router.get('/applicants', async (req, res) => {
        ORDER BY a.applied_at DESC`
     );
 
-    // Map verification status to a boolean
     const applicantsWithVerification = result.rows.map(a => ({
       ...a,
-      verificationSent: a.verification_status ? true : false
+      verificationSent: !!a.verification_status
     }));
 
     res.json(applicantsWithVerification);
@@ -178,6 +161,5 @@ router.get('/applicants', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 export default router;
