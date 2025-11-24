@@ -203,7 +203,7 @@ router.put('/:id', async (req, res) => {
 });
 // PUT /api/applicants/:id/sent-email
 // PUT /api/applicants/:userId/sent-email
-rrouter.put('/:userId/sent-email', async (req, res) => {
+router.put('/:userId/sent-email', async (req, res) => {
   const userId = parseInt(req.params.userId);
   const { sent_email } = req.body;
 
