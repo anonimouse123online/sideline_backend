@@ -230,7 +230,6 @@ router.get('/verify-account/user/:userId', async (req, res) => {
   }
 });
 // backend/routes/admin.js
-r// PUT verification by userId (create or update)
 router.put('/verify-account/:userId', async (req, res) => {
   const { userId } = req.params;
   const { status } = req.body;
