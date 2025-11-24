@@ -201,5 +201,37 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });
+// PUT /api/applicants/:id/sent-email
+router.put('/:id/sent-email', async (req, res) => {
+  const applicantId = req.params.id;
+  const { sent_email } = req.body;
+
+  if (typeof sent_email !== "boolean") {
+    return res.status(400).json({ error: "sent_email must be true or false" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE applicants
+       SET sent_email = $1
+       WHERE id = $2
+       RETURNING *`,
+      [sent_email, applicantId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Applicant not found" });
+    }
+
+    res.json({
+      message: `Email sent status updated to ${sent_email}`,
+      applicant: result.rows[0]
+    });
+  } catch (err) {
+    console.error("❌ Error updating sent_email:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 export default router;

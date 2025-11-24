@@ -183,5 +183,22 @@ router.put('/applicants/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// backend/routes/admin.js
+router.get('/applicants', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.sent_email, a.applied_at,
+              u.first_name, u.last_name, u.email
+       FROM applicants a
+       LEFT JOIN users u ON a.user_id = u.id
+       ORDER BY a.applied_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 export default router;
