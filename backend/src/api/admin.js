@@ -232,28 +232,43 @@ router.get('/verify-account/user/:userId', async (req, res) => {
 // backend/routes/admin.js
 router.put('/verify-account/:userId', async (req, res) => {
   const { userId } = req.params;
-  const { status } = req.body; // 'approved' or 'pending'
+  const { status } = req.body;
 
   try {
-    const result = await pool.query(
-      `UPDATE account_verifications
-       SET status = $1, updated_at = NOW()
-       WHERE user_id = $2
-       RETURNING *`,
-      [status, userId]
+    // Check existing verification
+    const existing = await pool.query(
+      `SELECT * FROM account_verifications WHERE user_id = $1`,
+      [userId]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Verification not found" });
+    let verification;
+    if (existing.rows.length === 0) {
+      // Create new verification if none exists
+      const insertRes = await pool.query(
+        `INSERT INTO account_verifications (user_id, status, created_at, sent_email)
+         VALUES ($1, $2, NOW(), false)
+         RETURNING *`,
+        [userId, status]
+      );
+      verification = insertRes.rows[0];
+    } else {
+      // Update existing
+      const updateRes = await pool.query(
+        `UPDATE account_verifications
+         SET status = $1, updated_at = NOW()
+         WHERE user_id = $2
+         RETURNING *`,
+        [status, userId]
+      );
+      verification = updateRes.rows[0];
     }
 
-    res.json({ message: `Verification ${status}`, verification: result.rows[0] });
+    res.json({ message: `Verification ${status}`, verification });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 
 export default router;
