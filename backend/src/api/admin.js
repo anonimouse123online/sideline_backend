@@ -229,6 +229,30 @@ router.get('/verify-account/user/:userId', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// backend/routes/admin.js
+router.put('/verify-account/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { status } = req.body; // 'approved' or 'pending'
+
+  try {
+    const result = await pool.query(
+      `UPDATE account_verifications
+       SET status = $1, updated_at = NOW()
+       WHERE user_id = $2
+       RETURNING *`,
+      [status, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Verification not found" });
+    }
+
+    res.json({ message: `Verification ${status}`, verification: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 
 
