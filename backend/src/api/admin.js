@@ -158,12 +158,13 @@ router.put('/applicants/:id', async (req, res) => {
   const { id } = req.params;
   let { status } = req.body;
 
-  const validStatuses = ['pending', 'approved', 'rejected'];
-  if (!status || !validStatuses.includes(status.trim())) {
-    return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(', ')}` });
-  }
+  if (!status) return res.status(400).json({ error: "Status is required" });
 
-  status = status.trim();
+  status = status.trim().toLowerCase(); // sanitize
+  const validStatuses = ["pending", "approved", "rejected"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(", ")}` });
+  }
 
   try {
     const result = await pool.query(
@@ -182,5 +183,6 @@ router.put('/applicants/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 export default router;
