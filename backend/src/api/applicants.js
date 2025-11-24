@@ -204,7 +204,7 @@ router.put('/:id', async (req, res) => {
 // PUT /api/applicants/:id/sent-email
 // PUT /api/applicants/:userId/sent-email
 // pseudo-code in applicants.js
-app.put("/api/applicants/:id/sent-email", async (req, res) => {
+router.put("/:id/sent-email", async (req, res)=> {
   const { sent_email } = req.body;
   const userId = req.params.id;
 
