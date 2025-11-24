@@ -119,5 +119,32 @@ router.get('/applicants', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// PUT /api/admin/verify-account/:id
+router.put('/verify-account/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) return res.status(400).json({ error: "Status is required" });
+
+  try {
+    const result = await pool.query(
+      `UPDATE account_verifications
+       SET status = $1
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Verification not found" });
+    }
+
+    res.json({ message: `Verification ${status}`, verification: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error updating verification:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 export default router;
