@@ -228,11 +228,12 @@ router.put('/:userId/sent-email', async (req, res) => {
     // 2️⃣ If no verification exists, optionally create one
     if (!verification) {
       const createRes = await pool.query(
-  `INSERT INTO account_verifications (user_id, sent_email, created_at)
-   VALUES ($1, $2, NOW())
+  `INSERT INTO account_verifications (user_id, sent_email, created_at, status)
+   VALUES ($1, $2, NOW(), 'pending')
    RETURNING *`,
   [userId, sent_email]
 );
+
 
       verification = createRes.rows[0];
 
