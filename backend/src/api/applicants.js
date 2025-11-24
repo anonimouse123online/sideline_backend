@@ -203,65 +203,30 @@ router.put('/:id', async (req, res) => {
 });
 // PUT /api/applicants/:id/sent-email
 // PUT /api/applicants/:userId/sent-email
-router.put('/:userId/sent-email', async (req, res) => {
-  const userId = parseInt(req.params.userId);
+// pseudo-code in applicants.js
+app.put("/api/applicants/:id/sent-email", async (req, res) => {
   const { sent_email } = req.body;
-
-  if (typeof sent_email !== "boolean") {
-    return res.status(400).json({ error: "sent_email must be true or false" });
-  }
+  const userId = req.params.id;
 
   try {
-    // 1️⃣ Find the latest verification for this user
-    const verificationRes = await pool.query(
-      `SELECT av.*
-       FROM account_verifications av
-       JOIN applicants a ON a.user_id = $1
-       WHERE av.user_id = a.user_id
-       ORDER BY av.created_at DESC
-       LIMIT 1`,
-      [userId]
+    let status = null;
+    if (sent_email) status = "approved";
+
+    const result = await pool.query(
+      `UPDATE account_verifications
+       SET sent_email = $1, status = $2, updated_at = NOW()
+       WHERE user_id = $3
+       RETURNING *`,
+      [sent_email, status, userId]
     );
 
-    let verification = verificationRes.rows[0];
-
-    // 2️⃣ If no verification exists, optionally create one
-    if (!verification) {
-      const createRes = await pool.query(
-  `INSERT INTO account_verifications (user_id, sent_email, created_at, status)
-   VALUES ($1, $2, NOW(), 'pending')
-   RETURNING *`,
-  [userId, sent_email]
-);
-
-
-      verification = createRes.rows[0];
-
-      return res.status(201).json({
-        message: "Verification record created and email status set",
-        verification
-      });
-    }
-
-    // 3️⃣ Update existing verification
-   const updateRes = await pool.query(
-  `UPDATE account_verifications
-   SET sent_email = $1
-   WHERE id = $2
-   RETURNING *`,
-  [sent_email, verification.id]
-);
-
-    res.json({
-      message: `Email sent status updated to ${sent_email}`,
-      verification: updateRes.rows[0]
-    });
-
+    res.json({ success: true, verification: result.rows[0] });
   } catch (err) {
-    console.error("❌ Error updating sent_email:", err);
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 export default router;
