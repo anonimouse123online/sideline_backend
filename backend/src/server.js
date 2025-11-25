@@ -251,29 +251,9 @@ const hashedPassword = password;
         return res.status(404).json({ error: "User not found" });
       res.status(200).json({ user: userResult.rows[0] });
     } catch (err) {
+      // ✅ This is the correct place! 'err' contains the detailed PostgreSQL error.
       console.error("Profile fetch error:", err);
-      res.status(500).json({ error: "Server error" });
-    }
-  });
-
-  // Upload/update profile picture
-  app.post("/api/profile/pic", upload.single("profilePic"), async (req, res) => {
-    try {
-      const storedUser = JSON.parse(req.body.user);
-      if (!storedUser || !storedUser.email)
-        return res.status(400).json({ error: "User not found" });
-      if (!req.file)
-        return res.status(400).json({ error: "No file uploaded" });
-
-      const filePath = `/uploads/${req.file.filename}`;
-      await pool.query("UPDATE users SET profile_pic=$1 WHERE email=$2", [
-        filePath,
-        storedUser.email,
-      ]);
-
-      res.status(200).json({ message: "Profile picture updated", profilePic: filePath });
-    } catch (err) {
-      console.error("Profile pic upload error:", err);
+      // The client sees this generic message:
       res.status(500).json({ error: "Server error" });
     }
   });
