@@ -6,6 +6,7 @@ const router = express.Router();
 
 // -------------------- DASHBOARD STATS -------------------- //
 router.get('/users/count', async (req, res) => {
+  console.log("🔹 GET /admin/users/count called");
   try {
     const result = await pool.query('SELECT COUNT(*) FROM users');
     res.json({ count: parseInt(result.rows[0].count) });
@@ -16,6 +17,7 @@ router.get('/users/count', async (req, res) => {
 });
 router.get('/verify-account/user/:userId', async (req, res) => {
   const { userId } = req.params;
+  console.log(`🔹 GET /admin/verify-account/user/${userId} called`);
   try {
     const result = await pool.query(
       `SELECT * FROM account_verifications WHERE user_id = $1`,
@@ -31,6 +33,7 @@ router.get('/verify-account/user/:userId', async (req, res) => {
 
 
 router.get('/jobs/count', async (req, res) => {
+  console.log("🔹 GET /admin/jobs/count called");
   try {
     const result = await pool.query('SELECT COUNT(*) FROM jobs');
     res.json({ count: parseInt(result.rows[0].count) });
@@ -41,6 +44,7 @@ router.get('/jobs/count', async (req, res) => {
 });
 
 router.get('/applicants/count', async (req, res) => {
+  console.log("🔹 GET /admin/applicants/count called");
   try {
     const result = await pool.query('SELECT COUNT(*) FROM applicants');
     res.json({ count: parseInt(result.rows[0].count) });
@@ -50,30 +54,8 @@ router.get('/applicants/count', async (req, res) => {
   }
 });
 
-// -------------------- VERIFICATIONS -------------------- //
-// GET all account verifications
-router.get('/verify-account', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT v.id, v.user_id, v.status, v.created_at, u.first_name, u.last_name, u.email
-       FROM account_verifications v
-       JOIN users u ON u.id = v.user_id
-       ORDER BY v.created_at DESC`
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Error fetching verifications:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-
-
-
-
-// -------------------- FULL LISTS FOR ADMIN -------------------- //
 router.get('/users', async (req, res) => {
+  console.log("🔹 GET /admin/users called");
   try {
     const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
     res.json(result.rows);
@@ -84,6 +66,7 @@ router.get('/users', async (req, res) => {
 });
 
 router.get('/jobs', async (req, res) => {
+  console.log("🔹 GET /admin/jobs called");
   try {
     const result = await pool.query('SELECT * FROM jobs ORDER BY id DESC');
     res.json(result.rows);
@@ -93,8 +76,9 @@ router.get('/jobs', async (req, res) => {
   }
 });
 
-// GET all applicants with verification info
+
 router.get('/applicants', async (req, res) => {
+  console.log("🔹 GET /admin/applicants called");
   try {
     const result = await pool.query(`
       SELECT a.id, a.job_id, a.user_id, a.position, a.status, a.applied_at,
@@ -109,7 +93,7 @@ router.get('/applicants', async (req, res) => {
 
     const applicants = result.rows.map(a => ({
       ...a,
-      sent_email: !!a.sent_email,           // now from account_verifications
+      sent_email: !!a.sent_email,           
       verificationSent: !!a.verification_status
     }));
 
@@ -124,6 +108,7 @@ router.get('/applicants', async (req, res) => {
 // PUT applicant status by ID
 router.put('/applicants/:id', async (req, res) => {
   const { id } = req.params;
+  console.log(`🔹 PUT /admin/applicants/${id} called`);
   let { status } = req.body;
 
   if (!status) return res.status(400).json({ error: "Status is required" });
@@ -156,6 +141,7 @@ router.put('/applicants/:id', async (req, res) => {
 // Update verification by account_verifications.id
 router.put('/verify-account/:id', async (req, res) => {
   const { id } = req.params;
+  console.log(`🔹 PUT /admin/verify-account/${id} called`);
   const { status } = req.body;
 
   if (!status) return res.status(400).json({ error: "Status is required" });

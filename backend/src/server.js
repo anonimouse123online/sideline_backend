@@ -277,6 +277,13 @@ const hashedPassword = password;
     console.log(`✅ Jobs routes: All routes are in jobsRouter`);
   });
 };
+app.use((req, res, next) => {
+  console.log(`📡 Incoming request: ${req.method} ${req.url}`);
+  next();
+});
+
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
 
 // Start the app
 startServer();
