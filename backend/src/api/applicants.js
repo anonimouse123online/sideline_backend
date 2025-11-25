@@ -9,6 +9,8 @@ const router = express.Router();
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY; // Your xkeysib-... API key
 
+const VALID_STATUSES = ['pending', 'reviewed', 'accepted', 'rejected'];
+
 // POST /api/applicants
 router.post('/', async (req, res) => {
   console.log("📩 Incoming Application:", req.body);
@@ -175,35 +177,43 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
 
 // Update application status
 router.put('/:id', async (req, res) => {
-  const applicationId = req.params.id;
-  const { status } = req.body;
+    const applicationId = req.params.id;
+    const { status } = req.body;
 
-  if (!status) {
-    return res.status(400).json({ error: "Missing 'status' in request body" });
-  }
-
-  try {
-    const result = await pool.query(
-      `UPDATE applicants
-       SET status = $1
-       WHERE id = $2
-       RETURNING *`,
-      [status, applicationId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Application not found' });
+    if (!status) {
+        return res.status(400).json({ error: "Missing 'status' in request body" });
     }
 
-    res.json({ message: 'Status updated', application: result.rows[0] });
-  } catch (err) {
-    console.error("❌ Error updating application status:", err);
-    res.status(500).json({ error: 'Internal server error', details: err.message });
-  }
+    // Input Validation: Check if the status is one of the allowed values
+    if (!VALID_STATUSES.includes(status)) {
+        return res.status(400).json({ 
+            error: `Invalid status value: '${status}'. Must be one of: ${VALID_STATUSES.join(', ')}` 
+        });
+    }
+
+    try {
+        const result = await pool.query(
+            `UPDATE applicants
+             SET status = $1,
+                 updated_at = NOW()  -- Corrected: Explicitly update the timestamp
+             WHERE id = $2
+             RETURNING *`,
+            [status, applicationId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Application not found' });
+        }
+
+        res.json({ message: 'Status updated', application: result.rows[0] });
+    } catch (err) {
+        console.error("❌ Error updating application status:", err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
 });
 // PUT /api/applicants/:userId/sent-email
 router.put('/:userId/sent-email', async (req, res) => {
-  const userId = parseInt(req.params.userId);
+  const userId = req.params.userId;
   const { sent_email } = req.body;
 
   if (typeof sent_email !== "boolean") {
