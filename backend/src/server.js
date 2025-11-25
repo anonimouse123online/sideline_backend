@@ -92,16 +92,6 @@ const startServer = async () => {
     console.log("✅ Uploads directory created");
   }
 
-  // Multer config for profile pictures
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      cb(null, `profilePic-${Date.now()}${ext}`);
-    },
-  });
-  const upload = multer({ storage });
-
   // -------------------- USER ENDPOINTS -------------------- //
 
   // ✅ UPDATED: Signup with JWT token
@@ -125,7 +115,7 @@ const hashedPassword = password;
       const newUser = await pool.query(
         `INSERT INTO users (first_name, last_name, email, phone, password) 
          VALUES ($1, $2, $3, $4, $5) 
-         RETURNING id, first_name, last_name, email, phone, profile_pic`,
+         RETURNING id, first_name, last_name, email, phone`,
         [firstName, lastName, email, phone || null, hashedPassword]
       );
 
@@ -148,8 +138,7 @@ const hashedPassword = password;
           firstName: user.first_name,
           lastName: user.last_name,
           email: user.email,
-          phone: user.phone,
-          profilePic: user.profile_pic || null,
+          phone: user.phone
         },
         token: token,
         expiresIn: '24h'
@@ -200,8 +189,7 @@ const hashedPassword = password;
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
-        phone: user.phone,
-        profilePic: user.profile_pic || null,
+        phone: user.phone
       },
       token: token,
       expiresIn: '24h'
@@ -223,7 +211,7 @@ const hashedPassword = password;
         `UPDATE users 
          SET first_name = $1, last_name = $2, phone = $3 
          WHERE email = $4 
-         RETURNING id, first_name, last_name, email, phone, profile_pic`,
+         RETURNING id, first_name, last_name, email, phone`,
         [firstName, lastName, phone, email]
       );
 
@@ -239,8 +227,7 @@ const hashedPassword = password;
           firstName: updatedUser.first_name,
           lastName: updatedUser.last_name,
           email: updatedUser.email,
-          phone: updatedUser.phone,
-          profilePic: updatedUser.profile_pic || null,
+          phone: updatedUser.phone
         }
       });
     } catch (err) {
@@ -256,7 +243,7 @@ const hashedPassword = password;
       if (!email) return res.status(400).json({ error: "Email is required" });
 
       const userResult = await pool.query(
-        `SELECT id, first_name AS "firstName", last_name AS "lastName", email, phone, profile_pic AS "profilePic" FROM users WHERE email = $1`,
+        `SELECT id, first_name AS "firstName", last_name AS "lastName", email, phone FROM users WHERE email = $1`,
         [email]
       );
 
