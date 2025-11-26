@@ -1,10 +1,8 @@
-// backend/routes/admin.js
 import express from 'express';
 import pool from '../../db.js';
 
 const router = express.Router();
 
-// -------------------- DASHBOARD STATS -------------------- //
 router.get('/users/count', async (req, res) => {
   console.log("🔹 GET /admin/users/count called");
   try {
@@ -105,7 +103,7 @@ router.get('/applicants', async (req, res) => {
 });
 
 
-// PUT applicant status by ID
+
 router.put('/applicants/:id', async (req, res) => {
   const { id } = req.params;
   console.log(`🔹 PUT /admin/applicants/${id} called`);
@@ -137,8 +135,6 @@ router.put('/applicants/:id', async (req, res) => {
   }
 });
 
-// backend/routes/admin.js
-// Update verification by account_verifications.id
 router.put('/verify-account/:id', async (req, res) => {
   const { id } = req.params;
   console.log(`🔹 PUT /admin/verify-account/${id} called`);
@@ -171,6 +167,31 @@ router.put('/verify-account/:id', async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+router.put('/applicants/:id/email-sent', async (req, res) => {
+  const { id } = req.params;
+  const { email_sent } = req.body; 
+
+  try {
+    const result = await pool.query(
+      `UPDATE applicants
+       SET email_sent = $1
+       WHERE id = $2
+       RETURNING *`,
+      [email_sent, id]
+    );
+
+    if (result.rows.length === 0) 
+      return res.status(404).json({ error: "Applicant not found" });
+
+    res.json({ message: `Email sent status updated`, applicant: result.rows[0] });
+  } catch (err) {
+    console.error("Error updating email_sent:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 
 export default router;
