@@ -224,53 +224,32 @@ router.put('/:userId/sent-email', async (req, res) => {
     // Determine new status
     const newStatus = sent_email ? "approved" : "pending";
 
-    // Check if the user exists
-    const userRes = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Check for existing verification
-    const verificationRes = await pool.query(
-      `SELECT * FROM account_verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+    // Get the latest applicant record for this user
+    const applicantRes = await pool.query(
+      `SELECT * FROM applicants WHERE user_id = $1 ORDER BY applied_at DESC LIMIT 1`,
       [userId]
     );
 
-    let verification = verificationRes.rows[0];
-
-    if (!verification) {
-      // Create verification if none exists
-      const createRes = await pool.query(
-        `INSERT INTO account_verifications (user_id, sent_email, status, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         RETURNING *`,
-        [userId, sent_email, newStatus]
-      );
-      verification = createRes.rows[0];
-      return res.status(201).json({
-        success: true,
-        message: "Verification record created",
-        verification,
-        isVerified: newStatus === "approved"
-      });
+    if (applicantRes.rows.length === 0) {
+      return res.status(404).json({ error: "Applicant not found" });
     }
 
-    // Update existing verification
+    const applicant = applicantRes.rows[0];
+
+    // Update the applicant record with email_sent and status
     const updateRes = await pool.query(
-      `UPDATE account_verifications
-       SET sent_email = $1, status = $2, updated_at = NOW()
+      `UPDATE applicants
+       SET email_sent = $1, status = $2, updated_at = NOW()
        WHERE id = $3
        RETURNING *`,
-      [sent_email, newStatus, verification.id]
+      [sent_email, newStatus, applicant.id]
     );
-
-    verification = updateRes.rows[0];
 
     res.json({
       success: true,
-      message: `Email sent status updated to ${sent_email}`,
-      verification,
-      isVerified: newStatus === "approved"
+      message: "Email status updated",
+      applicant: updateRes.rows[0],
+      isVerified: sent_email
     });
 
   } catch (err) {
