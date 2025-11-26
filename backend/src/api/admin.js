@@ -151,6 +151,7 @@ router.put('/verify-account/:id', async (req, res) => {
 });
 
 // PUT /api/applicants/:userId/sent-email
+// PUT /api/applicants/:userId/sent-email
 router.put('/:userId/sent-email', async (req, res) => {
   const userId = req.params.userId;
   const { sent_email } = req.body;
@@ -171,17 +172,15 @@ router.put('/:userId/sent-email', async (req, res) => {
     }
 
     const applicant = applicantRes.rows[0];
-    const newStatus = sent_email ? "approved" : "pending";
 
-    // Update applicant record
+    // Only update email_sent, not status
     const updateRes = await pool.query(
       `UPDATE applicants
        SET email_sent = $1,
-           status = $2,
            updated_at = NOW()
-       WHERE id = $3
+       WHERE id = $2
        RETURNING *`,
-      [sent_email, newStatus, applicant.id]
+      [sent_email, applicant.id]
     );
 
     res.json({
