@@ -11,9 +11,10 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import jobsRouter from './api/job.js'; // ✅ FIXED: Correct file name
+import jobsRouter from './api/job.js'; 
 import applicantsRouter from './api/applicants.js';
 import adminRouter from './api/admin.js';
+
 
 dotenv.config();
 
