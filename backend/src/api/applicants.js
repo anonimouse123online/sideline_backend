@@ -1,6 +1,9 @@
 import express from 'express';
 import pool from '../../db.js';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
+
+const otpStore = {};
 
 dotenv.config();
 
@@ -247,6 +250,83 @@ router.put('/:userId/sent-email', async (req, res) => {
   } catch (err) {
     console.error("❌ Error updating sent_email:", err);
     res.status(500).json({ error: "Internal server error", details: err.message });
+  }
+});
+router.post("/forgot-password/send-otp", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email is required" });
+
+  try {
+    // Check if user exists
+    const userRes = await pool.query("SELECT id, first_name FROM users WHERE email=$1", [email]);
+    if (userRes.rows.length === 0) return res.status(404).json({ error: "Email not found" });
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 2 * 60 * 1000; // 2 minutes
+
+    // Save OTP in memory
+    otpStore[email] = { otp, expires };
+
+    // Prepare email HTML
+    const emailHTML = `
+      <p>Hello ${userRes.rows[0].first_name || ""},</p>
+      <p>Your OTP for password reset is:</p>
+      <h2>${otp}</h2>
+      <p>This OTP will expire in 2 minutes.</p>
+    `;
+
+    // Send via Brevo
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": BREVO_API_KEY
+      },
+      body: JSON.stringify({
+        sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
+        to: [{ email }],
+        subject: "Your OTP for Password Reset",
+        htmlContent: emailHTML
+      })
+    });
+
+    const result = await response.json();
+    console.log("📧 OTP sent via Brevo:", result);
+
+    res.json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error("❌ Error sending OTP:", err.message);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+router.post("/forgot-password/verify-otp", async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  if (!email || !otp || !newPassword)
+    return res.status(400).json({ error: "Email, OTP, and newPassword are required" });
+
+  const record = otpStore[email];
+
+  // Check if OTP exists and is valid
+  if (!record || record.expires < Date.now())
+    return res.status(400).json({ error: "OTP expired or invalid" });
+
+  if (record.otp !== otp)
+    return res.status(400).json({ error: "Incorrect OTP" });
+
+  try {
+    // Hash the new password before saving
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query("UPDATE users SET password=$1 WHERE email=$2", [hashedPassword, email]);
+
+    // Remove OTP from memory after use
+    delete otpStore[email];
+
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    console.error("❌ Error resetting password:", err.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
