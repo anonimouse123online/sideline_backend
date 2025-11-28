@@ -13,7 +13,6 @@ import bcrypt from "bcryptjs";
 import jobsRouter from './api/job.js'; 
 import applicantsRouter from './api/applicants.js';
 import adminRouter from './api/admin.js';
-import { join } from "path";
 
 
 dotenv.config();
@@ -260,12 +259,6 @@ if (user.password.startsWith("$2")) {
   app.use('/api/admin', adminRouter);
 
   app.use("/uploads", express.static(uploadsDir));
-  const frontendPath = join(__dirname, "client/build");
-  app.use(express.static(frontendPath));
-
-  app.get("*", (req, res) => {
-    res.sendFile(join(frontendPath, "index.html"));
-  });
 
   app.listen(port, () => {
     console.log(`🚀 Server running on port ${port}`);
