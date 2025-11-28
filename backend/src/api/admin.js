@@ -72,7 +72,7 @@ router.get('/applicants', async (req, res) => {
 
     const applicants = result.rows.map(a => ({
       ...a,
-      email_sent: !!a.email_sent,  // convert to boolean
+      email_sent: !!a.email_sent,
       isVerified: a.status === 'approved'
     }));
 
@@ -150,8 +150,7 @@ router.put('/verify-account/:id', async (req, res) => {
   }
 });
 
-// PUT /api/applicants/:userId/sent-email
-// PUT /api/applicants/:userId/sent-email
+
 router.put('/:userId/sent-email', async (req, res) => {
   const userId = req.params.userId;
   const { sent_email } = req.body;
@@ -161,7 +160,6 @@ router.put('/:userId/sent-email', async (req, res) => {
   }
 
   try {
-    // Check if applicant exists
     const applicantRes = await pool.query(
       'SELECT * FROM applicants WHERE user_id = $1 ORDER BY applied_at DESC LIMIT 1',
       [userId]
@@ -173,7 +171,6 @@ router.put('/:userId/sent-email', async (req, res) => {
 
     const applicant = applicantRes.rows[0];
 
-    // Only update email_sent, not status
     const updateRes = await pool.query(
       `UPDATE applicants
        SET email_sent = $1,

@@ -1,4 +1,3 @@
-// src/api/signup.js
 export async function signup(email, password, fullName, phone = "") {
   const [firstName, ...rest] = fullName.split(" ");
   const lastName = rest.join(" ");
@@ -21,7 +20,6 @@ export async function signup(email, password, fullName, phone = "") {
     throw new Error(data.error || "Signup failed");
   }
 
-  // Store token if available
   if (data.token) {
     localStorage.setItem('token', data.token);
     console.log('✅ Signup token stored');
@@ -30,7 +28,6 @@ export async function signup(email, password, fullName, phone = "") {
     console.log('✅ Signup accessToken stored');
   }
 
-  // Also store user data in localStorage
   if (data.user) {
     localStorage.setItem('user', JSON.stringify(data.user));
     console.log('✅ User data stored');

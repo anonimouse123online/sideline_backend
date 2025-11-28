@@ -1,4 +1,3 @@
-// backend/routes/applicants.js
 import express from 'express';
 import pool from '../../db.js';
 import dotenv from 'dotenv';
@@ -7,7 +6,7 @@ dotenv.config();
 
 const router = express.Router();
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY; // Your xkeysib-... API key
+const BREVO_API_KEY = process.env.BREVO_API_KEY; 
 
 const VALID_STATUSES = ['pending', 'reviewed', 'accepted', 'rejected'];
 
@@ -39,7 +38,6 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // Check duplicate
     const existing = await pool.query(
       'SELECT id FROM applicants WHERE job_id=$1 AND user_id=$2',
       [job_id, user_id]
@@ -51,8 +49,6 @@ router.post('/', async (req, res) => {
         applicant_id: existing.rows[0].id
       });
     }
-
-    // Insert application
     const inserted = await pool.query(
       `INSERT INTO applicants 
        (job_id, user_id, experience, location, cover_letter, resume_url, skills, status, position, applied_at)
@@ -72,13 +68,13 @@ router.post('/', async (req, res) => {
 
     const application = inserted.rows[0];
 
-    // Respond immediately to client
+
     res.status(201).json({
       message: 'Application submitted successfully',
       application
     });
 
-    // Async: fetch user and job info for email
+
     const [applicantRes, jobRes] = await Promise.all([
       pool.query(`SELECT first_name, last_name, email FROM users WHERE id=$1`, [user_id]),
       pool.query(`SELECT title, description, contact_email FROM jobs WHERE id=$1`, [job_id])
@@ -134,7 +130,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET all applications for a user
 router.get('/user/:id/applications', async (req, res) => {
   const userId = req.params.id;
   try {
@@ -154,7 +149,7 @@ router.get('/user/:id/applications', async (req, res) => {
   }
 });
 
-// GET all applicants for a specific job
+
 router.get('/jobs/:jobId/applicants', async (req, res) => {
   const jobId = req.params.jobId;
   try {
@@ -175,7 +170,7 @@ router.get('/jobs/:jobId/applicants', async (req, res) => {
   }
 });
 
-// Update application status
+
 router.put('/:id', async (req, res) => {
     const applicationId = req.params.id;
     const { status } = req.body;
@@ -184,7 +179,6 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: "Missing 'status' in request body" });
     }
 
-    // Input Validation: Check if the status is one of the allowed values
     if (!VALID_STATUSES.includes(status)) {
         return res.status(400).json({ 
             error: `Invalid status value: '${status}'. Must be one of: ${VALID_STATUSES.join(', ')}` 
@@ -211,7 +205,7 @@ router.put('/:id', async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
-// PUT /api/applicants/:userId/sent-email
+
 router.put('/:userId/sent-email', async (req, res) => {
   const userId = req.params.userId;
   const { sent_email } = req.body;
@@ -221,10 +215,9 @@ router.put('/:userId/sent-email', async (req, res) => {
   }
 
   try {
-    // Determine new status
     const newStatus = sent_email ? "approved" : "pending";
 
-    // Get the latest applicant record for this user
+
     const applicantRes = await pool.query(
       `SELECT * FROM applicants WHERE user_id = $1 ORDER BY applied_at DESC LIMIT 1`,
       [userId]
@@ -236,7 +229,6 @@ router.put('/:userId/sent-email', async (req, res) => {
 
     const applicant = applicantRes.rows[0];
 
-    // Update the applicant record with email_sent and status
     const updateRes = await pool.query(
       `UPDATE applicants
        SET email_sent = $1, status = $2, updated_at = NOW()

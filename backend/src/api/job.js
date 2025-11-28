@@ -1,4 +1,3 @@
-// src/api/job.js
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
@@ -12,7 +11,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// -------------------- JWT Authentication Middleware -------------------- //
+
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader?.split(' ')[1];
@@ -26,7 +25,6 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// -------------------- POST /api/jobs -------------------- //
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
@@ -47,7 +45,6 @@ router.post('/', authenticateToken, async (req, res) => {
       screeningQuestions = [],
     } = req.body;
 
-    // Validation
     if (!title || !description || !category || !jobType || !paymentType || !contact_email) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -85,7 +82,6 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// -------------------- GET /api/jobs -------------------- //
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM jobs ORDER BY created_at DESC');
@@ -96,7 +92,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// -------------------- GET /api/jobs/count -------------------- //
 router.get('/count', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) FROM jobs');
@@ -107,7 +102,6 @@ router.get('/count', async (req, res) => {
   }
 });
 
-// -------------------- GET /api/jobs/search?q= -------------------- //
 router.get('/search', async (req, res) => {
   const q = req.query.q || '';
   try {
@@ -122,7 +116,6 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// -------------------- GET /api/jobs/:id -------------------- //
 router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Job ID must be a number' });
@@ -138,8 +131,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// -------------------- GET /api/jobs/user -------------------- //
-// Fetch jobs posted by logged-in user
+
 router.get('/user/me', authenticateToken, async (req, res) => {
   try {
     const userEmail = req.user.email;
