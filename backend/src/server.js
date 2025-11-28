@@ -108,7 +108,9 @@ const startServer = async () => {
 
       // Hash password
       // TEMP: Store plain password (no hashing)
-const hashedPassword = password;
+      // Hash password before saving
+      const hashedPassword = await bcrypt.hash(password, 10);
+
 
 
       // Create user
@@ -167,9 +169,20 @@ const hashedPassword = password;
     const user = userResult.rows[0];
 
     // 🟦 PLAIN PASSWORD CHECK (NO BCRYPT)
-    if (password !== user.password) {
-      return res.status(400).json({ error: "Invalid password" });
-    }
+   // Check if password is hashed (bcrypt hashes start with $2)
+if (user.password.startsWith("$2")) {
+  // Compare hashed password
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(400).json({ error: "Invalid password" });
+} else {
+  // Plain text password (old user)
+  if (password !== user.password) return res.status(400).json({ error: "Invalid password" });
+
+  // Upgrade to hashed password after successful login
+  const hash = await bcrypt.hash(password, 10);
+  await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hash, user.id]);
+}
+
 
     // Generate token
     const token = jwt.sign(
