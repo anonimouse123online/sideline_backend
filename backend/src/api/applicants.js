@@ -190,13 +190,13 @@ router.put('/:id', async (req, res) => {
 
     try {
         const result = await pool.query(
-            `UPDATE applicants
-             SET status = $1,
-                 updated_at = NOW()  -- Corrected: Explicitly update the timestamp
-             WHERE id = $2
-             RETURNING *`,
-            [status, applicationId]
-        );
+  `UPDATE applicants
+   SET status = $1
+   WHERE id = $2
+   RETURNING *`,
+  [status, applicationId]
+);
+
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Application not found' });
@@ -233,12 +233,13 @@ router.put('/:userId/sent-email', async (req, res) => {
     const applicant = applicantRes.rows[0];
 
     const updateRes = await pool.query(
-      `UPDATE applicants
-       SET email_sent = $1, status = $2, updated_at = NOW()
-       WHERE id = $3
-       RETURNING *`,
-      [sent_email, newStatus, applicant.id]
-    );
+  `UPDATE applicants
+   SET email_sent = $1, status = $2
+   WHERE id = $3
+   RETURNING *`,
+  [sent_email, newStatus, applicant.id]
+);
+
 
     res.json({
       success: true,
