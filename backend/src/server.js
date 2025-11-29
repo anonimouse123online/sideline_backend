@@ -95,57 +95,88 @@ const startServer = async () => {
 
 
   app.post("/api/signup", async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone, password } = req.body;
+    if (!firstName || !lastName || !email || !password)
+      return res.status(400).json({ error: "Missing required fields" });
+
+    const existingUser = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+    if (existingUser.rows.length > 0)
+      return res.status(400).json({ error: "Email already registered" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await pool.query(
+      `INSERT INTO users (first_name, last_name, email, phone, password) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING id, first_name, last_name, email, phone`,
+      [firstName, lastName, email, phone || null, hashedPassword]
+    );
+
+    const user = newUser.rows[0];
+
+    const token = jwt.sign(
+      { 
+        userId: user.id,
+        email: user.email 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // =====================================================
+    // 📩 SEND WELCOME EMAIL VIA BREVO
+    // =====================================================
     try {
-      const { firstName, lastName, email, phone, password } = req.body;
-      if (!firstName || !lastName || !email || !password)
-        return res.status(400).json({ error: "Missing required fields" });
+      const welcomeHTML = `
+        <h2>Welcome to Sideline Jobs, ${user.first_name}!</h2>
+        <p>Thank you for signing up — we're excited to have you on board.</p>
+        <p>You can now browse jobs, post opportunities, and start earning.</p>
+        <br />
+        <p>— Sideline Jobs Team</p>
+      `;
 
-
-      const existingUser = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-      if (existingUser.rows.length > 0)
-        return res.status(400).json({ error: "Email already registered" });
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-
-
-
-      const newUser = await pool.query(
-        `INSERT INTO users (first_name, last_name, email, phone, password) 
-         VALUES ($1, $2, $3, $4, $5) 
-         RETURNING id, first_name, last_name, email, phone`,
-        [firstName, lastName, email, phone || null, hashedPassword]
-      );
-
-      const user = newUser.rows[0];
-
-
-      const token = jwt.sign(
-        { 
-          userId: user.id,
-          email: user.email 
+      const emailResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": process.env.BREVO_API_KEY
         },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.status(201).json({ 
-        message: "Account created successfully",
-        user: {
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          email: user.email,
-          phone: user.phone
-        },
-        token: token,
-        expiresIn: '24h'
+        body: JSON.stringify({
+          sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
+          to: [{ email: user.email }],
+          subject: "🎉 Welcome to Sideline Jobs!",
+          htmlContent: welcomeHTML
+        })
       });
-    } catch (err) {
-      console.error("Signup error:", err);
-      res.status(500).json({ error: "Server error" });
+
+      const emailResult = await emailResponse.json();
+      console.log("📨 Welcome email sent:", emailResult);
+
+    } catch (emailErr) {
+      console.error("❌ Error sending welcome email:", emailErr.message);
     }
-  });
+    // =====================================================
+
+    res.status(201).json({ 
+      message: "Account created successfully",
+      user: {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+        phone: user.phone
+      },
+      token: token,
+      expiresIn: '24h'
+    });
+
+  } catch (err) {
+    console.error("Signup error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 
 
   app.post("/api/login", async (req, res) => {
