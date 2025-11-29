@@ -149,5 +149,24 @@ router.get('/user/me', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+router.delete('/:id', authenticateToken, async (req, res) => {
+  const jobId = parseInt(req.params.id, 10);
+  const userEmail = req.user.email;
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM jobs WHERE id = $1 AND contact_email = $2 RETURNING *',
+      [jobId, userEmail]
+    );
+
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Job not found or unauthorized' });
+
+    res.json({ message: 'Job deleted successfully', job: result.rows[0] });
+  } catch (err) {
+    console.error('Error deleting job:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 export default router;
