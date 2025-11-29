@@ -13,7 +13,6 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY;
 
 const VALID_STATUSES = ['pending', 'reviewed', 'accepted', 'rejected'];
 
-// POST /api/applicants
 router.post('/', async (req, res) => {
   console.log("📩 Incoming Application:", req.body);
 

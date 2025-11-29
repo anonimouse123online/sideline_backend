@@ -13,6 +13,13 @@ import bcrypt from "bcryptjs";
 import jobsRouter from './api/job.js'; 
 import applicantsRouter from './api/applicants.js';
 import adminRouter from './api/admin.js';
+import rateLimit from 'express-rate-limit';
+
+const authLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5,
+  message: "Too many attempts, please try again later."
+});
 
 
 dotenv.config();
@@ -94,7 +101,7 @@ const startServer = async () => {
 
 
 
-  app.post("/api/signup", async (req, res) => {
+  app.post("/api/signup", authLimiter, async (req, res) => {
   try {
     const { firstName, lastName, email, phone, password } = req.body;
     if (!firstName || !lastName || !email || !password)
@@ -179,7 +186,7 @@ const startServer = async () => {
 
 
 
-  app.post("/api/login", async (req, res) => {
+  app.post("/api/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
