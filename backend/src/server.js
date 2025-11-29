@@ -16,10 +16,13 @@ import adminRouter from './api/admin.js';
 import rateLimit from 'express-rate-limit';
 
 const authLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
+  windowMs: 10 * 60 * 1000,
   max: 5,
-  message: "Too many attempts, please try again later."
+  handler: (req, res) => {
+    res.status(429).json({ error: "Too many login attempts. Try again later." });
+  }
 });
+
 
 
 dotenv.config();
