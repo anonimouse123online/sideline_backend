@@ -218,9 +218,7 @@ router.put('/:userId/sent-email', async (req, res) => {
   }
 
   try {
-    const newStatus = sent_email ? "approved" : "pending";
-
-
+    const newStatus = sent_email ? "accepted" : "pending";
     const applicantRes = await pool.query(
       `SELECT * FROM applicants WHERE user_id = $1 ORDER BY applied_at DESC LIMIT 1`,
       [userId]
