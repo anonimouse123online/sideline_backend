@@ -104,7 +104,7 @@ const startServer = async () => {
 
 
 
-  app.post("/api/signup", authLimiter, async (req, res) => {
+  app.post("/api/signup", async (req, res) => {
   try {
     const { firstName, lastName, email, phone, password } = req.body;
     if (!firstName || !lastName || !email || !password)
