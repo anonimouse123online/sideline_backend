@@ -60,10 +60,13 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
-    'https://sideline-frontend.onrender.com' 
+    'https://sideline-frontend.onrender.com',
+    'https://www.sidelinejob.site',      // ← ADD THIS
+    'https://sidelinejob.site'           // ← And this (no www)
   ],
   credentials: true
 }));
+
 
 app.use(bodyParser.json());
 
