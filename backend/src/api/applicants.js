@@ -314,11 +314,11 @@ router.post("/forgot-password/verify-otp", async (req, res) => {
     return res.status(400).json({ error: "Incorrect OTP" });
 
   try {
-    // Hash the new password before saving
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await pool.query("UPDATE users SET password=$1 WHERE email=$2", [hashedPassword, email]);
 
-    // Remove OTP from memory after use
+
     delete otpStore[email];
 
     res.json({ message: "Password reset successfully" });
