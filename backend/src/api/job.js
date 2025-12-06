@@ -167,6 +167,91 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+// --- PUT/PATCH Job (Update Existing Job) ---
+router.put('/:id', authenticateToken, async (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+    const userEmail = req.user.email;
+
+    if (isNaN(jobId)) {
+        return res.status(400).json({ error: 'Job ID must be a number' });
+    }
+
+    try {
+        // 1. Fetch the existing job details
+        const currentJobResult = await pool.query('SELECT * FROM jobs WHERE id = $1', [jobId]);
+        if (currentJobResult.rowCount === 0) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+        const currentJob = currentJobResult.rows[0];
+
+        // 2. Check if the authenticated user is the owner
+        if (currentJob.contact_email !== userEmail) {
+            return res.status(403).json({ error: 'You are not authorized to update this job.' });
+        }
+
+        // 3. Merge new data with existing data
+        const updatedData = { ...currentJob, ...req.body };
+
+        // 4. Handle special data types and normalization
+        const skills = JSON.stringify(updatedData.skills || []);
+        const screeningQuestions = JSON.stringify(updatedData.screening_questions || []);
+        
+        // Handle budget fields for 'negotiable' or null
+        const minBudget = updatedData.paymenttype === 'negotiable' ? null : (updatedData.minbudget ?? null);
+        const maxBudget = updatedData.paymenttype === 'negotiable' ? null : (updatedData.maxbudget ?? null);
+        
+        // Final check for required location
+        if ((updatedData.job_type === 'on-site' || updatedData.job_type === 'hybrid') && !updatedData.location) {
+             return res.status(400).json({ error: "Location is required for 'On-site' or 'Hybrid' jobs." });
+        }
+        
+        // 5. Execute the UPDATE query
+        const result = await pool.query(
+            `UPDATE jobs SET
+                title = $1,
+                description = $2,
+                category = $3,
+                skills = $4,
+                job_type = $5,
+                location = $6,
+                duration = $7,
+                start_date = $8,
+                payment_type = $9,
+                min_budget = $10,
+                max_budget = $11,
+                currency = $12,
+                contact_email = $13,
+                deadline = $14,
+                screening_questions = $15
+            WHERE id = $16
+            RETURNING *`,
+            [
+                updatedData.title,
+                updatedData.description,
+                updatedData.category,
+                skills, // JSON
+                updatedData.job_type,
+                updatedData.location || null,
+                updatedData.duration || null,
+                updatedData.start_date || null,
+                updatedData.payment_type,
+                minBudget,
+                maxBudget,
+                updatedData.currency,
+                updatedData.contact_email,
+                updatedData.deadline || null,
+                screeningQuestions, // JSON
+                jobId
+            ]
+        );
+
+        res.status(200).json({ message: 'Job updated successfully', job: result.rows[0] });
+
+    } catch (err) {
+        console.error(`Error updating job ${jobId}:`, err);
+        res.status(500).json({ error: 'Internal server error during update' });
+    }
+});
 
 
 export default router;
