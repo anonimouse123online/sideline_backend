@@ -297,51 +297,7 @@ if (user.password.startsWith("$2")) {
       res.status(500).json({ error: "Server error" });
     }
   });
-  // Add this route within the startServer function body, 
-// for example, right after app.get("/api/profile", ...)
-
-app.get("/api/users/:id", authenticateToken, async (req, res) => {
-    const userIdFromUrl = parseInt(req.params.id, 10);
-
-    if (isNaN(userIdFromUrl)) {
-        return res.status(400).json({ error: "User ID must be a number" });
-    }
-
-    // Authorization check: Ensure the user requesting data is the same user logged in
-    // This assumes your JWT payload has a 'userId' field.
-    if (req.user.userId !== userIdFromUrl) {
-        return res.status(403).json({ error: "Unauthorized access to user data" });
-    }
-
-    try {
-        // Fetch user data using the ID
-        const result = await pool.query(
-            `SELECT 
-                first_name AS "firstName", 
-                last_name AS "lastName", 
-                email 
-             FROM users 
-             WHERE id = $1`,
-            [userIdFromUrl]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        const user = result.rows[0];
-        
-        // Return the first name as 'name' to match the frontend state update logic
-        res.status(200).json({
-            name: user.firstName, 
-            email: user.email,
-        });
-
-    } catch (err) {
-        console.error("Error fetching user details:", err);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
+  
 
   app.use('/api/jobs', jobsRouter);
   app.use('/api/applicants', applicantsRouter);
