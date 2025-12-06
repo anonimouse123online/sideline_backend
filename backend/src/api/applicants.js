@@ -87,19 +87,17 @@ router.post('/', async (req, res) => {
 
     if (job?.contact_email) {
       const emailHTML = `
-        <p>Hello,</p>
-        <p>You received a new application for <strong>${job.title}</strong>.</p>
-        <h3>Applicant Details:</h3>
-        <ul>
-          <li><strong>Name:</strong> ${applicant?.first_name || ''} ${applicant?.last_name || ''}</li>
-          <li><strong>Email:</strong> ${applicant?.email || 'N/A'}</li>
-          <li><strong>Experience:</strong> ${experience || 'N/A'}</li>
-          <li><strong>Location:</strong> ${location || 'N/A'}</li>
-          <li><strong>Cover Letter:</strong> ${cover_letter || 'N/A'}</li>
-          <li><strong>Skills:</strong> ${skills ? skills.join(', ') : 'N/A'}</li>
-          <li><strong>Resume:</strong> ${resume_url ? `<a href="${resume_url}">View Resume</a>` : 'N/A'}</li>
-        </ul>
-      `;
+    <p>Hello,</p>
+    <p>You received a new application for <strong>${job.title}</strong>.</p>
+    
+    <h3>Applicant Details:</h3>
+    
+    <p><strong>Name:</strong> ${applicant?.first_name || ''} ${applicant?.last_name || ''}</p>
+    <p><strong>Email:</strong> ${applicant?.email || 'N/A'}</p>
+    <p><strong>Skills:</strong> ${skills ? skills.join(', ') : 'N/A'}</p>
+
+    <p style="margin-top: 20px;">Please log into your Sideline account to manage this application.</p>
+`;
       try {
         const response = await fetch("https://api.brevo.com/v3/smtp/email", {
           method: "POST",
