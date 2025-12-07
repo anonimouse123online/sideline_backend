@@ -231,5 +231,33 @@ router.delete('/user/:id', async (req, res) => {
   }
 });
 
+// DELETE a job by ID
+router.delete('/jobs/:id', async (req, res) => {
+  const jobId = parseInt(req.params.id, 10);
+
+  if (isNaN(jobId)) {
+    return res.status(400).json({ error: 'Invalid job ID' });
+  }
+
+  try {
+    // Delete the job
+    const deletedJob = await pool.query(
+      'DELETE FROM jobs WHERE id=$1 RETURNING *',
+      [jobId]
+    );
+
+    if (deletedJob.rows.length === 0) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.json({
+      message: 'Job deleted successfully',
+      job: deletedJob.rows[0]
+    });
+  } catch (err) {
+    console.error('❌ Error deleting job:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
 
 export default router;
