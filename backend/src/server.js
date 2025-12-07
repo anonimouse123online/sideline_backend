@@ -156,7 +156,7 @@ const startServer = async () => {
           "api-key": process.env.BREVO_API_KEY
         },
         body: JSON.stringify({
-          sender: { name: "Sideline Jobs", email: "sidelinejobservice@gmail.com" },
+          sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
           to: [{ email: user.email }],
           subject: "🎉 Welcome to Sideline Jobs!",
           htmlContent: welcomeHTML
