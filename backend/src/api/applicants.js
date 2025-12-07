@@ -106,7 +106,7 @@ router.post('/', async (req, res) => {
             "api-key": BREVO_API_KEY
           },
           body: JSON.stringify({
-            sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
+            sender: { name: "Sideline Jobs", email: "sidelinejobservice@gmail.com" },
             to: [{ email: job.contact_email }],
             subject: `New Application: ${job.title}`,
             htmlContent: emailHTML
@@ -280,7 +280,7 @@ router.post("/forgot-password/send-otp", async (req, res) => {
         "api-key": BREVO_API_KEY
       },
       body: JSON.stringify({
-        sender: { name: "Sideline Jobs", email: "paulkurtperocillo@gmail.com" },
+        sender: { name: "Sideline Jobs", email: "sidelinejobservice@gmail.com" },
         to: [{ email }],
         subject: "Your OTP for Password Reset",
         htmlContent: emailHTML
