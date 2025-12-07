@@ -193,7 +193,8 @@ router.put('/:userId/sent-email', async (req, res) => {
   }
 });
 // DELETE a user and all related jobs + applicants
-router.delete('/admin/user/:id', async (req, res) => {
+// DELETE a user and all related jobs + applicants
+router.delete('/user/:id', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
 
   if (isNaN(userId)) {
@@ -201,16 +202,16 @@ router.delete('/admin/user/:id', async (req, res) => {
   }
 
   try {
-    // Delete all applications submitted by the user
+    // 1️⃣ Delete all applications submitted by the user
     await pool.query('DELETE FROM applicants WHERE user_id=$1', [userId]);
 
-    // Delete all jobs posted by the user
+    // 2️⃣ Delete all jobs posted by the user
     await pool.query(
       'DELETE FROM jobs WHERE contact_email = (SELECT email FROM users WHERE id=$1)',
       [userId]
     );
 
-    // Delete the user
+    // 3️⃣ Delete the user
     const deletedUser = await pool.query(
       'DELETE FROM users WHERE id=$1 RETURNING *',
       [userId]
