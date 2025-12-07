@@ -193,33 +193,42 @@ router.put('/:userId/sent-email', async (req, res) => {
   }
 });
 // DELETE a user and all related jobs + applicants
-router.delete('/admin/user/:id', authenticateAdmin, async (req, res) => {
+router.delete('/admin/user/:id', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
 
+  if (isNaN(userId)) {
+    return res.status(400).json({ error: 'Invalid user ID' });
+  }
+
   try {
-    // 1️⃣ Delete all applications submitted by the user
+    // Delete all applications submitted by the user
     await pool.query('DELETE FROM applicants WHERE user_id=$1', [userId]);
 
-    // 2️⃣ Delete all jobs posted by the user
-    await pool.query('DELETE FROM jobs WHERE contact_email = (SELECT email FROM users WHERE id=$1)', [userId]);
+    // Delete all jobs posted by the user
+    await pool.query(
+      'DELETE FROM jobs WHERE contact_email = (SELECT email FROM users WHERE id=$1)',
+      [userId]
+    );
 
-    // 3️⃣ Delete the user
-    const deletedUser = await pool.query('DELETE FROM users WHERE id=$1 RETURNING *', [userId]);
+    // Delete the user
+    const deletedUser = await pool.query(
+      'DELETE FROM users WHERE id=$1 RETURNING *',
+      [userId]
+    );
 
     if (deletedUser.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ message: 'User and all related jobs/applications deleted successfully', user: deletedUser.rows[0] });
+    res.json({
+      message: 'User and all related jobs/applications deleted successfully',
+      user: deletedUser.rows[0]
+    });
   } catch (err) {
     console.error('❌ Error deleting user:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });
-
-
-
-
 
 
 export default router;
