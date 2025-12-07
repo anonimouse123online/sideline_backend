@@ -52,8 +52,8 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const result = await pool.query(
   `INSERT INTO jobs
-    (title, description, category, skills, jobtype, location, duration, startdate,
-     paymenttype, minbudget, maxbudget, currency, contact_email, deadline, screeningquestions)
+    (title, description, category, skills, job_type, location, duration, start_date,
+     payment_type, min_budget, max_budget, currency, contact_email, deadline, screening_questions)
    VALUES
     ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
    RETURNING *`,
@@ -62,19 +62,21 @@ router.post('/', authenticateToken, async (req, res) => {
     description,
     category,
     JSON.stringify(skills),
-    jobType,
+    jobType,                  // matches job_type column
     location || null,
     duration || null,
-    startDate || null,
-    paymentType,
-    minBudget !== undefined ? minBudget : null,
-    maxBudget !== undefined ? maxBudget : null,
+    startDate || null,        // matches start_date column
+    paymentType,              // matches payment_type column
+    minBudget !== undefined ? minBudget : null, // matches min_budget
+    maxBudget !== undefined ? maxBudget : null, // matches max_budget
     currency,
     contact_email,
     deadline || null,
-    JSON.stringify(screeningQuestions),
+    JSON.stringify(screeningQuestions)
   ]
 );
+
+
 
 
     res.status(201).json({ message: 'Job posted successfully', job: result.rows[0] });
@@ -206,7 +208,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// --- PUT/PATCH Job (Update Existing Job) ---
 // --- PUT/PATCH Job (Update Existing Job) ---
 router.put('/:id', authenticateToken, async (req, res) => {
     const jobId = parseInt(req.params.id, 10);
